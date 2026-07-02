@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Zambia GeoHub AI — ACN Architecture Diagrams</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f0f0f0;
+    font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    padding: 32px;
+    color: #222;
+  }
+  .hint {
+    background: #fff8dc;
+    border: 1px solid #e0c040;
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 28px;
+  }
+
+  /* ── Each printable page ── */
+  .page {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 40px 44px 44px;
+    margin-bottom: 36px;
+    width: 940px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+  }
+  .fig-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    color: #1a3a5c;
+    margin-bottom: 4px;
+    letter-spacing: 0.2px;
+  }
+  .fig-sub {
+    font-size: 11px;
+    color: #777;
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  /* ═══════════════════════════════════════════
+     FIGURE 1  —  DEPLOYMENT ARCHITECTURE
+  ═══════════════════════════════════════════ */
+
+  /* Generic component box */
+  .comp {
+    border: 1.5px solid #b0b8c8;
+    border-radius: 4px;
+    background: #fff;
+    text-align: center;
+    padding: 10px 12px 8px;
+  }
+  .comp-icon { font-size: 26px; display: block; margin-bottom: 5px; }
+  .comp-title { font-size: 12px; font-weight: 700; color: #1a3a5c; }
+  .comp-sub   { font-size: 10px; color: #555; margin-top: 3px; line-height: 1.4; }
+
+  /* Group / zone containers */
+  .zone {
+    border: 1.5px solid;
+    border-radius: 5px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .zone-label {
+    position: absolute;
+    top: -10px; left: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 0 6px;
+    background: #fff;
+  }
+
+  /* Colour themes */
+  .zone-hosting   { border-color: #1a3a5c; background: #f0f4f9; }
+  .zone-hosting   .zone-label { color: #1a3a5c; }
+  .zone-app       { border-color: #2a6496; background: rgba(42,100,150,0.06); }
+  .zone-app       .zone-label { color: #2a6496; }
+  .zone-auth      { border-color: #888; border-style: dashed; background: #fafafa; }
+  .zone-auth      .zone-label { color: #555; }
+  .zone-geohub    { border-color: #2e7d32; background: #f1f8f1; }
+  .zone-geohub    .zone-label { color: #2e7d32; }
+  .zone-mai       { border-color: #c62828; background: #fdf1f1; }
+  .zone-mai       .zone-label { color: #c62828; }
+  .zone-public    { border-color: #b07800; background: #fffbf0; }
+  .zone-public    .zone-label { color: #b07800; }
+
+  /* Arrows */
+  .arr-down {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0; margin: 0 auto;
+  }
+  .arr-line  { width: 1.5px; background: #666; }
+  .arr-head  { width: 0; height: 0;
+               border-left: 6px solid transparent;
+               border-right: 6px solid transparent;
+               border-top: 8px solid #666; }
+  .arr-lbl   { font-size: 10px; color: #555; text-align: center;
+               margin: 1px 0; white-space: nowrap; }
+  .arr-dashed { border-left: 1.5px dashed #888; width: 1px; }
+
+  /* Component grid inside app zone */
+  .app-modules {
+    display: flex; gap: 10px; flex-wrap: nowrap; justify-content: center;
+  }
+  .mod {
+    background: rgba(255,255,255,0.8);
+    border: 1.5px solid rgba(42,100,150,0.35);
+    border-radius: 4px;
+    padding: 8px 10px;
+    text-align: center;
+    min-width: 110px; flex: 1;
+  }
+  .mod-icon  { font-size: 18px; }
+  .mod-title { font-size: 10.5px; font-weight: 700; color: #1a3a5c; margin-top: 4px; }
+
+  /* Auth badge pills */
+  .badge {
+    display: inline-block;
+    border-radius: 12px;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    margin-top: 4px;
+  }
+  .badge-g { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .badge-r { background: #fce4ec; color: #c62828; border: 1px solid #ef9a9a; }
+  .badge-y { background: #fff8e1; color: #b07800; border: 1px solid #ffe082; }
+
+  /* Horizontal connectors */
+  .h-connector {
+    display: flex; align-items: flex-start; width: 100%;
+    justify-content: space-between; margin: 0;
+  }
+  .h-conn-item {
+    display: flex; flex-direction: column; align-items: center;
+    width: 33.3%;
+  }
+
+  /* Bottom service row */
+  .svc-row {
+    display: flex; gap: 16px; align-items: flex-start;
+    justify-content: center;
+  }
+  .svc { flex: 1; }
+
+  /* ═══════════════════════════════════════════
+     FIGURE 2  —  PROCESS FLOW
+  ═══════════════════════════════════════════ */
+  .flow-body { display: flex; gap: 28px; align-items: flex-start; }
+  .flow-steps { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+  .step-row { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 560px; }
+  .step-num {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .step-box {
+    flex: 1; border: 1.5px solid; border-radius: 4px; padding: 8px 14px;
+  }
+  .step-title { font-size: 12px; font-weight: 700; }
+  .step-desc  { font-size: 10.5px; margin-top: 3px; line-height: 1.45; }
+  .step-arrow { width: 1.5px; height: 14px; background: #aaa; margin-left: 17px; flex-shrink: 0; }
+
+  /* Step themes */
+  .s1 .step-num { background: #1a3a5c; }
+  .s1 .step-box { border-color: #90caf9; background: #e8f4fd; color: #0d2a4a; }
+  .s2 .step-num { background: #4527a0; }
+  .s2 .step-box { border-color: #ce93d8; background: #f3e5f5; color: #311b5e; }
+  .s3 .step-num { background: #4527a0; }
+  .s3 .step-box { border-color: #ce93d8; background: #f3e5f5; color: #311b5e; }
+  .s4 .step-num { background: #e65100; }
+  .s4 .step-box { border-color: #ffb74d; background: #fff3e0; color: #7c3600; }
+  .s5 .step-num { background: #2e7d32; }
+  .s5 .step-box { border-color: #81c784; background: #e8f5e9; color: #1b5520; }
+  .s6 .step-num { background: #1565c0; }
+  .s6 .step-box { border-color: #64b5f6; background: #e3f2fd; color: #0d2a7a; }
+  .s7 .step-num { background: #c62828; }
+  .s7 .step-box { border-color: #ef9a9a; background: #fce4ec; color: #7b0015; }
+  .s8 .step-num { background: #2e7d32; }
+  .s8 .step-box { border-color: #a5d6a7; background: #f1f8f1; color: #1b5520; }
+
+  /* Side panel */
+  .side-panel {
+    flex: 0 0 205px;
+    display: flex; flex-direction: column; gap: 12px;
+    padding-top: 2px;
+  }
+  .side-card {
+    border: 1.5px solid #b0c4d8;
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-size: 10.5px;
+    background: #f8fafc;
+  }
+  .side-card-title {
+    font-size: 11px; font-weight: 700; color: #1a3a5c;
+    margin-bottom: 7px;
+  }
+  .side-card p { line-height: 1.6; color: #444; }
+  .side-card code {
+    background: #e8f0f8; padding: 1px 4px; border-radius: 3px;
+    font-size: 9.5px; font-family: 'Courier New', monospace;
+  }
+
+  .flow-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid #eee;
+    justify-content: center;
+  }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #555; }
+  .leg-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+  @media print {
+    body { padding: 0; background: white; }
+    .hint { display: none; }
+    .page { box-shadow: none; border: none; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  To insert into Word: <b>Cmd+Shift+4</b> on Mac to screenshot each white box → Insert → Picture in Word. Or File → Print → Save as PDF in Chrome.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FIGURE 1 — DEPLOYMENT ARCHITECTURE
+════════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="fig-label">Figure 1: Zambia GeoHub AI Assistant — Deployment Architecture</div>
+  <div class="fig-sub">In-scope components and external integrations for the WBG Posit Connect deployment</div>
+
+  <!-- USER -->
+  <div style="display:flex;justify-content:center;margin-bottom:0;">
+    <div class="comp" style="width:220px;">
+      <span class="comp-icon">🖥️</span>
+      <div class="comp-title">User (Browser)</div>
+      <div class="comp-sub">World Bank Staff &amp; Partners<br>Any device · No plugins required</div>
+    </div>
+  </div>
+
+  <!-- Arrow down -->
+  <div class="arr-down" style="height:36px;">
+    <div class="arr-line" style="height:18px;"></div>
+    <div class="arr-lbl">HTTPS</div>
+    <div class="arr-line" style="height:8px;"></div>
+    <div class="arr-head"></div>
+  </div>
+
+  <!-- POSIT CONNECT ZONE -->
+  <div class="zone zone-hosting" style="margin-bottom:0;padding-bottom:18px;">
+    <span class="zone-label">WBG Posit Connect — Application Hosting (WBG-managed)</span>
+
+    <!-- APP ZONE inside -->
+    <div class="zone zone-app" style="margin-top:8px;">
+      <span class="zone-label">Zambia GeoHub AI Application</span>
+      <div class="app-modules" style="margin-top:10px;">
+        <div class="mod">
+          <div class="mod-icon">💬</div>
+          <div class="mod-title">Chat Interface</div>
+        </div>
+        <div class="mod">
+          <div class="mod-icon">🔍</div>
+          <div class="mod-title">Dataset Search</div>
+        </div>
+        <div class="mod">
+          <div class="mod-icon">🤖</div>
+          <div class="mod-title">AI Inference Client</div>
+        </div>
+        <div class="mod">
+          <div class="mod-icon">📄</div>
+          <div class="mod-title">Report Generator</div>
+        </div>
+        <div class="mod">
+          <div class="mod-icon">🗺️</div>
+          <div class="mod-title">Map Renderer</div>
+        </div>
+        <div class="mod">
+          <div class="mod-icon">💾</div>
+          <div class="mod-title">Offline Data Cache</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three arrows down to external services -->
+  <div class="h-connector" style="margin-top:0;">
+    <div class="h-conn-item">
+      <div class="arr-down" style="height:46px;">
+        <div class="arr-line" style="height:14px;"></div>
+        <div class="arr-lbl">HTTPS · ArcGIS REST API</div>
+        <div class="arr-line" style="height:10px;"></div>
+        <div class="arr-head"></div>
+      </div>
+    </div>
+    <div class="h-conn-item">
+      <div class="arr-down" style="height:46px;">
+        <div class="arr-line" style="height:14px;"></div>
+        <div class="arr-lbl">HTTPS · OAuth 2.0 Bearer</div>
+        <div class="arr-line" style="height:10px;"></div>
+        <div class="arr-head"></div>
+      </div>
+    </div>
+    <div class="h-conn-item">
+      <div class="arr-down" style="height:46px;">
+        <div class="arr-line" style="height:14px;"></div>
+        <div class="arr-lbl">HTTPS · No authentication</div>
+        <div class="arr-line" style="height:10px;"></div>
+        <div class="arr-head"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External services row -->
+  <div class="svc-row">
+
+    <!-- Zambia GeoHub -->
+    <div class="svc">
+      <div class="zone zone-geohub" style="text-align:center;padding:14px 12px;">
+        <span class="zone-label">Zambia GeoHub</span>
+        <div style="font-size:28px;margin:6px 0 4px;">🗄️</div>
+        <div style="font-size:12px;font-weight:700;color:#2e7d32;">ArcGIS Online (Esri)</div>
+        <div style="font-size:10.5px;color:#444;margin-top:4px;line-height:1.5;">
+          National Geospatial Data Hub<br>
+          FeatureServer REST API<br>
+          80+ Zambia datasets
+        </div>
+        <div style="margin-top:8px;">
+          <span class="badge badge-g">Public datasets: no auth</span><br>
+          <span class="badge badge-g" style="margin-top:3px;">Private datasets: Bearer token</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- mAI Factory -->
+    <div class="svc">
+      <div class="zone zone-mai" style="text-align:center;padding:14px 12px;">
+        <span class="zone-label">WBG mAI Factory</span>
+        <div style="font-size:28px;margin:6px 0 4px;">🤖</div>
+        <div style="font-size:12px;font-weight:700;color:#c62828;">AI Gateway (WBG-approved)</div>
+        <div style="font-size:10.5px;color:#444;margin-top:4px;line-height:1.5;">
+          azapimdev.worldbank.org<br>
+          GPT-5 via Azure OpenAI<br>
+          Claude Sonnet via Amazon Bedrock
+        </div>
+        <div style="margin-top:8px;">
+          <span class="badge badge-r">Posit Connect OAuth (RFC 8693)</span><br>
+          <span class="badge badge-r" style="margin-top:3px;">Azure AD Bearer token</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Public APIs -->
+    <div class="svc">
+      <div class="zone zone-public" style="text-align:center;padding:14px 12px;">
+        <span class="zone-label">Public Geospatial Services</span>
+        <div style="font-size:28px;margin:6px 0 4px;">🌍</div>
+        <div style="font-size:12px;font-weight:700;color:#b07800;">Open Services</div>
+        <div style="font-size:10.5px;color:#444;margin-top:4px;line-height:1.5;">
+          Open-Elevation API<br>
+          OSRM Road Routing<br>
+          (OpenStreetMap)
+        </div>
+        <div style="margin-top:8px;">
+          <span class="badge badge-y">No authentication required</span><br>
+          <span class="badge badge-y" style="margin-top:3px;">Offline fallback available</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /svc-row -->
+
+  <!-- Authentication panel (dashed) -->
+  <div class="zone zone-auth" style="margin-top:20px;display:flex;gap:30px;align-items:flex-start;padding:14px 18px;">
+    <span class="zone-label">Authentication Flows</span>
+
+    <div style="flex:1;font-size:10.5px;color:#444;line-height:1.6;">
+      <strong style="color:#2e7d32;">ArcGIS (Geospatial Data)</strong><br>
+      Private datasets: short-lived Bearer token (14-day expiry) stored as a server-side environment variable. Passed as a URL parameter on FeatureServer API requests. Public datasets require no token.
+    </div>
+    <div style="width:1.5px;background:#ccc;align-self:stretch;"></div>
+    <div style="flex:1;font-size:10.5px;color:#444;line-height:1.6;">
+      <strong style="color:#c62828;">mAI Factory (AI Inference) — Posit Connect OAuth</strong><br>
+      Posit Connect auto-injects a per-session token. Application exchanges it for an Azure AD Bearer token via RFC 8693 token exchange. Bearer token sent to the WBG mAI Factory gateway. No API keys stored in application code.
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:16px;font-size:10px;color:#555;">
+    <span>■ <span style="color:#1a3a5c;font-weight:600;">WBG Posit Connect</span> — WBG-managed hosting</span>
+    <span>■ <span style="color:#2e7d32;font-weight:600;">Zambia GeoHub</span> — ArcGIS Online / Esri</span>
+    <span>■ <span style="color:#c62828;font-weight:600;">WBG mAI Factory</span> — AI inference gateway</span>
+    <span>■ <span style="color:#b07800;font-weight:600;">Public Services</span> — No auth · Low risk</span>
+    <span style="color:#888;">— — — Authentication boundary (dashed)</span>
+  </div>
+
+</div><!-- /page -->
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     FIGURE 2 — PROCESS FLOW
+════════════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="fig-label">Figure 2: Zambia GeoHub AI Assistant — End-to-End Process Flow</div>
+  <div class="fig-sub">Data flow from user query through geospatial retrieval, AI inference, and display</div>
+
+  <div class="flow-body">
+
+    <!-- LEFT: Numbered steps -->
+    <div class="flow-steps">
+
+      <div class="step-row s1">
+        <div class="step-num">1</div>
+        <div class="step-box">
+          <div class="step-title">User Query</div>
+          <div class="step-desc">User submits a natural language question via the web chat interface. Optional: attach a document (PDF/Word) or map image for additional context.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s2">
+        <div class="step-num">2</div>
+        <div class="step-box">
+          <div class="step-title">Intent Detection</div>
+          <div class="step-desc">Server-side processing classifies the query intent: <strong>Chatbot Q&amp;A</strong>, <strong>Report Generation</strong> (.docx / PDF), or <strong>Dataset Summary</strong>.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s3">
+        <div class="step-num">3</div>
+        <div class="step-box">
+          <div class="step-title">Location &amp; Topic Extraction</div>
+          <div class="step-desc">Geographic entity (district or province) and thematic keyword (e.g. schools, health, floods) are extracted from the query text to guide dataset selection and API filtering.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s4">
+        <div class="step-num">4</div>
+        <div class="step-box">
+          <div class="step-title">Dataset Catalog Search</div>
+          <div class="step-desc">The application scores ~80 curated Zambia GeoHub dataset entries against the query using keyword ranking. The highest-scoring relevant dataset is selected for retrieval.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s5">
+        <div class="step-num">5</div>
+        <div class="step-box">
+          <div class="step-title">Geospatial Data Retrieval — ArcGIS REST API</div>
+          <div class="step-desc">HTTPS request to the Zambia GeoHub FeatureServer. District or province filter applied. Returns up to 200 feature records as GeoJSON. <strong>Fallback:</strong> pre-loaded offline dataset if the live server is unavailable.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s6">
+        <div class="step-num">6</div>
+        <div class="step-box">
+          <div class="step-title">AI Prompt Construction</div>
+          <div class="step-desc">Structured prompt assembled from: user question + dataset metadata + up to 15 sampled records + pre-aggregated counts by area + system rules (no hallucination, cite sources, Zambia-only scope).</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s7">
+        <div class="step-num">7</div>
+        <div class="step-box">
+          <div class="step-title">AI Inference — WBG mAI Factory</div>
+          <div class="step-desc">HTTPS POST to WBG mAI Factory (azapimdev.worldbank.org) with Azure AD Bearer token obtained via Posit Connect OAuth exchange. GPT-5 or Claude Sonnet generates the analysis. Response streamed in real time.</div>
+        </div>
+      </div>
+      <div class="step-arrow"></div>
+
+      <div class="step-row s8">
+        <div class="step-num">8</div>
+        <div class="step-box">
+          <div class="step-title">Display &amp; Output</div>
+          <div class="step-desc">Results rendered in the browser: <strong>AI text analysis</strong> (streaming markdown) · <strong>Interactive map</strong> (district boundaries + data points) · <strong>Data table</strong> · <strong>Download</strong> (Word .docx / PDF generated in memory — no server storage).</div>
+        </div>
+      </div>
+
+    </div><!-- /flow-steps -->
+
+    <!-- RIGHT: Side panel -->
+    <div class="side-panel">
+
+      <div class="side-card">
+        <div class="side-card-title">🔐 Authentication Detail</div>
+        <p>
+          <strong style="color:#2e7d32;">ArcGIS Bearer Token</strong><br>
+          • Public datasets: no token needed<br>
+          • Private datasets: server-side env variable<br>
+          • 14-day expiry, rotated manually<br>
+          • Never exposed to end user
+        </p>
+        <div style="margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">
+          <strong style="color:#c62828;">Posit Connect OAuth (RFC 8693)</strong><br>
+          <p style="margin-top:3px;">
+            1. Posit injects <code>SESSION_TOKEN</code> per viewer<br>
+            2. App exchanges for Azure AD Bearer<br>
+            3. Bearer used to call mAI Factory<br>
+            <strong>No AI keys stored in code</strong>
+          </p>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <div class="side-card-title">📊 Data Scope</div>
+        <p style="line-height:1.7;">
+          Datasets available: ~80<br>
+          Records per query: max 200<br>
+          Records sent to AI: max 15<br>
+          <strong>No PII in any API call</strong><br>
+          Classification: Public /<br>
+          &nbsp;&nbsp;WBG Official Use Only<br>
+          Server storage: <strong>None</strong>
+        </p>
+      </div>
+
+      <div class="side-card" style="border-color:#e0a800;background:#fffdf0;">
+        <div class="side-card-title" style="color:#7a5500;">⚡ Resilience</div>
+        <p style="line-height:1.7;">
+          GeoHub down → offline JSON<br>
+          OSRM down → built-in road graph<br>
+          Elevation down → graceful skip<br>
+          App is fully stateless
+        </p>
+      </div>
+
+    </div><!-- /side-panel -->
+
+  </div><!-- /flow-body -->
+
+  <!-- Legend -->
+  <div class="flow-legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#1a3a5c;"></div>User / Browser</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#4527a0;"></div>In-application processing (no external call)</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2e7d32;"></div>Zambia GeoHub — ArcGIS REST API</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#c62828;"></div>WBG mAI Factory — AI inference</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#2e7d32;"></div>Browser display</div>
+  </div>
+
+</div><!-- /page -->
+
+</body>
+</html>

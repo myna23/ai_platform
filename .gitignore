@@ -1,0 +1,28 @@
+# API keys — NEVER commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Generated reports (demo output)
+demo_report.docx
+demo_report.pdf
+
+# Mac
+.DS_Store
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Project notes / scratch files
+note
+get_token.py
+main.ipynb
+
+# Word docs (documentation lives in .md files)
+*.docx
