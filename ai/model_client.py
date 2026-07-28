@@ -292,7 +292,6 @@ class ModelClient:
                 "subject_token":     session_token,
                 "audience":          oauth_guid,
             },
-            verify=False,
             timeout=30,
         )
         if not resp.ok:
