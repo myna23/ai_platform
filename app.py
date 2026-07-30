@@ -2758,6 +2758,7 @@ def process_question(question: str):
     # Detect location once, at the top — used in both context mode and free search mode
     _location, _loc_type = _extract_location(question)
     _comparison_locs = _extract_comparison_locations(question)  # ["Lusaka", "Copperbelt"] for compare queries
+    _cmp_other_note = ""  # populated below (free-search path only) when a second location's real data is fetched
     _radius_km = _extract_radius_km(question)      # e.g. 5.0 for "within 5km"
     _buffer_center = None                           # (lat, lon) set later if radius detected
 
@@ -3114,6 +3115,59 @@ def process_question(question: str):
                             st.info(f"🌐 Showing {len(live_feats)} live records for {_location}{_count_label}.")
                     except Exception as _e:
                         _live_error = str(_e)
+
+            # 1a-2. Comparison mode — fetch the OTHER location's real data too, so the
+            # AI has genuine records for both sides instead of just an instruction to
+            # "compare" with data it was never given. Best-effort: only handles the
+            # standard district/province field-filter path (not bbox spatial datasets
+            # like settlements/population), and silently skips on any error so the
+            # primary single-location answer still works.
+            _cmp_other_note = ""
+            if len(_comparison_locs) == 2 and _live_candidate and not locals().get("_needs_bbox", True):
+                try:
+                    _other_loc = next(
+                        (l for l in _comparison_locs if l.lower() != _location.lower()),
+                        None,
+                    )
+                    if _other_loc:
+                        _other_loc_type = "province" if _other_loc.lower() in _ZAMBIA_PROVINCES else "district"
+                        _other_clause = (
+                            f"District='{_other_loc}' OR DISTRICT='{_other_loc}'"
+                            if _other_loc_type == "district"
+                            else f"Province='{_other_loc}' OR PROVINCE='{_other_loc}'"
+                        )
+                        _other_poi_clause = locals().get("_poi_type_clause", "")
+                        _other_where = f"({_other_clause}) AND {_other_poi_clause}" if _other_poi_clause else _other_clause
+                        _other_cnt_resp = _req.get(f"{_base_url}/query",
+                            params={"where": _other_where, "returnCountOnly": "true", "f": "json",
+                                    **_tok_params},
+                            headers=_headers, timeout=15)
+                        _other_total = _other_cnt_resp.json().get("count")
+                        _other_resp = _req.get(f"{_base_url}/query",
+                            params={"where": _other_where, "outFields": "*",
+                                    "resultRecordCount": 200, "f": "geojson",
+                                    **_tok_params},
+                            headers=_headers, timeout=30)
+                        _other_resp.raise_for_status()
+                        _other_gjson = _other_resp.json()
+                        _other_feats = _other_gjson.get("features", []) if "error" not in _other_gjson else []
+                        if _other_feats:
+                            _other_sample = geojson_to_sample_rows(_other_gjson, n=min(len(_other_feats), 15))
+                            _cmp_other_note = (
+                                f"\n\n--- COMPARISON DATA FOR {_other_loc} ---\n"
+                                f"Exact total records for {_other_loc}: "
+                                f"{_other_total if _other_total is not None else len(_other_feats)}\n"
+                                f"Sample records:\n```json\n{_json_mod.dumps(_other_sample, indent=2)}\n```\n"
+                                f"--- END COMPARISON DATA FOR {_other_loc} ---"
+                            )
+                            st.info(f"🌐 Also showing {len(_other_feats)} live records for {_other_loc} (comparison).")
+                        else:
+                            _cmp_other_note = (
+                                f"\n\n[No records found for {_other_loc} in this dataset — "
+                                f"state this honestly rather than guessing a number.]"
+                            )
+                except Exception:
+                    pass  # comparison enrichment is best-effort; primary answer still works
 
             # 1b. Cross-dataset context — flood and risk fetched alongside main dataset.
             # Flood DistName field is stored in ALL CAPS so we use UPPER() for matching.
@@ -3851,8 +3905,13 @@ def process_question(question: str):
             # Add current user prompt (with dataset context) as the final user turn
             _compare_note = (
                 f"\n⚡ COMPARISON REQUEST: The user wants a side-by-side comparison of "
-                f"{' and '.join(_comparison_locs)}. Use the sample records to compare "
-                f"counts, types, and coverage between these locations. Present as a comparison table if possible."
+                f"{' and '.join(_comparison_locs)}. The sample records above are for "
+                f"{_location or _comparison_locs[0]}; real data for the other location "
+                f"is provided below if available. Use both to compare counts, types, and "
+                f"coverage between these locations. Present as a comparison table if possible. "
+                f"If the second location's data is genuinely unavailable, say so explicitly "
+                f"instead of guessing a number."
+                f"{_cmp_other_note}"
                 if _comparison_locs else ""
             )
             # Append uploaded document context if present
