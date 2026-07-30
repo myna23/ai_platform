@@ -2049,16 +2049,32 @@ def _extract_comparison_locations(text: str):
     """
     Detect 'compare X and Y' or 'X vs Y' patterns.
     Returns list of location strings if found, else empty list.
+
+    Location names are bounded to 1-3 words (not an arbitrary character count) and
+    the match must be followed by a recognised boundary — a topic clause like
+    "in terms of ...", punctuation, or end of string. Without this, a greedy
+    character-count match on "compare Lusaka and Kitwe in terms of schools" would
+    swallow the topic clause too, capturing "Kitwe in terms of sch" instead of "Kitwe".
     """
     t = text.lower()
+    _word = r"[a-z][a-z\-]*"
+    _phrase = rf"{_word}(?:\s+{_word}){{0,2}}"  # 1-3 word location name
+    _boundary = r"(?=\s+in\s+terms\s+of\b|\s+regarding\b|\s+for\b|[.,!?]|$)"
     # "compare X and Y" or "X vs Y" or "X versus Y"
     for pattern in [
-        _re.search(r'compare\s+([a-z][a-z\s]{2,20})\s+and\s+([a-z][a-z\s]{2,20})', t),
-        _re.search(r'([a-z][a-z\s]{2,15})\s+vs\.?\s+([a-z][a-z\s]{2,15})', t),
-        _re.search(r'([a-z][a-z\s]{2,15})\s+versus\s+([a-z][a-z\s]{2,15})', t),
+        _re.search(rf'compare\s+({_phrase})\s+and\s+({_phrase}){_boundary}', t),
+        _re.search(rf'({_phrase})\s+vs\.?\s+({_phrase}){_boundary}', t),
+        _re.search(rf'({_phrase})\s+versus\s+({_phrase}){_boundary}', t),
     ]:
         if pattern:
-            locs = [pattern.group(1).strip().title(), pattern.group(2).strip().title()]
+            locs = [pattern.group(1).strip(), pattern.group(2).strip()]
+            # Strip a trailing "district"/"province"/"region" word, matching
+            # _extract_location()'s behaviour — the field values in the actual
+            # dataset are just "Chongwe", not "Chongwe District".
+            locs = [
+                _re.sub(r'\s+(?:district|province|region)\s*$', '', l, flags=_re.IGNORECASE).title()
+                for l in locs
+            ]
             # Filter out generic words
             locs = [l for l in locs if l.lower() not in {"the", "a", "an", "all", "zambia", "africa"}]
             if len(locs) == 2:
