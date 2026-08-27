@@ -24,8 +24,7 @@ PROVIDERS = {
         "env_key":    "WB_AZURE_ENDPOINT",
         "package":    "azure-openai",
         "docs_url":   "https://ai.worldbank.org/",
-        "api_version": "2025-04-01-preview",
-        "mai_base":   "https://azapimdev.worldbank.org/conversationalai/v2/",
+        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
     },
     # ── World Bank Desktop (DesktopToken auth) — Claude via mAI Bedrock ─
     # Same DesktopToken auth as GPT, but routes to Bedrock Claude endpoint.
@@ -50,8 +49,7 @@ PROVIDERS = {
         "models":     ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
         "env_key":    "WB_POSIT",
         "package":    "azure-openai",
-        "api_version": "2025-04-01-preview",
-        "mai_base":   "https://azapimdev.worldbank.org/conversationalai/v2/",
+        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
     },
     "WB Posit (Claude)": {
         "best":    "us.anthropic.claude-sonnet-4-6",
@@ -323,25 +321,27 @@ class ModelClient:
     # ------------------------------------------------------------------
 
     def _azure_openai_client(self):
-        from openai import AzureOpenAI
+        # Migrated from AzureOpenAI (conversationalai/v2/, Azure-specific SDK
+        # client) to the plain OpenAI client against the new maifactory/openai
+        # endpoint, per the mAI Factory migration notice (legacy conversationalai
+        # endpoints deprecated 2026-08-31, disabled 2026-09-30).
+        from openai import OpenAI
         pinfo = PROVIDERS[self.provider]
         if self.provider == "WB Posit (GPT)":
             token = self._get_auth_token()
-            token_provider = lambda: token
         else:
             try:
                 from itsai.platform.authentication import DesktopToken
             except ImportError:
                 raise ImportError("Install: pip install itsai-platform")
             token_class = DesktopToken()
-            token_provider = lambda: token_class.token_provider(env="DEV")
+            token = token_class.token_provider(env="DEV")
         extra_headers = {}
         if self.provider == "WB Posit (GPT)":
             extra_headers = {"x-source-type": "interactive", "x-team-name": "posit-zambia"}
-        return AzureOpenAI(
-            azure_endpoint=pinfo.get("mai_base", self.api_key),
-            azure_ad_token_provider=token_provider,
-            api_version=pinfo.get("api_version", "2025-04-01-preview"),
+        return OpenAI(
+            base_url=pinfo.get("mai_base", self.api_key),
+            api_key=token,
             default_headers=extra_headers,
         )
 
