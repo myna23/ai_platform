@@ -279,10 +279,6 @@
           <div class="mod-title">AI Inference Client</div>
         </div>
         <div class="mod">
-          <div class="mod-icon">📄</div>
-          <div class="mod-title">Report Generator</div>
-        </div>
-        <div class="mod">
           <div class="mod-icon">🗺️</div>
           <div class="mod-title">Map Renderer</div>
         </div>
@@ -312,14 +308,6 @@
         <div class="arr-head"></div>
       </div>
     </div>
-    <div class="h-conn-item">
-      <div class="arr-down" style="height:46px;">
-        <div class="arr-line" style="height:14px;"></div>
-        <div class="arr-lbl">HTTPS · No authentication</div>
-        <div class="arr-line" style="height:10px;"></div>
-        <div class="arr-head"></div>
-      </div>
-    </div>
   </div>
 
   <!-- External services row -->
@@ -337,22 +325,18 @@
           80+ Zambia datasets
         </div>
         <div style="margin-top:8px;">
-          <span class="badge badge-g">Public datasets: no auth</span><br>
-          <span class="badge badge-g" style="margin-top:3px;">Private datasets: Bearer token</span>
+          <span class="badge badge-g">Public datasets: no auth</span>
         </div>
       </div>
     </div>
 
-    <!-- mAI Factory -->
+    <!-- Azure APIM Gateway (COM Gateway) -->
     <div class="svc">
       <div class="zone zone-mai" style="text-align:center;padding:14px 12px;">
-        <span class="zone-label">WBG mAI Factory</span>
+        <span class="zone-label">Azure APIM Gateway (COM Gateway)</span>
         <div style="font-size:28px;margin:6px 0 4px;">🤖</div>
-        <div style="font-size:12px;font-weight:700;color:#c62828;">AI Gateway (WBG-approved)</div>
         <div style="font-size:10.5px;color:#444;margin-top:4px;line-height:1.5;">
-          azapimdev.worldbank.org<br>
-          GPT-5 via Azure OpenAI<br>
-          Claude Sonnet via Amazon Bedrock
+          azapim.worldbank.org
         </div>
         <div style="margin-top:8px;">
           <span class="badge badge-r">Posit Connect OAuth (RFC 8693)</span><br>
@@ -361,25 +345,32 @@
       </div>
     </div>
 
-    <!-- Public APIs -->
-    <div class="svc">
-      <div class="zone zone-public" style="text-align:center;padding:14px 12px;">
-        <span class="zone-label">Public Geospatial Services</span>
-        <div style="font-size:28px;margin:6px 0 4px;">🌍</div>
-        <div style="font-size:12px;font-weight:700;color:#b07800;">Open Services</div>
+  </div><!-- /svc-row -->
+
+  <!-- Arrow down from Azure APIM Gateway to mAI LLM End Points -->
+  <div style="display:flex;justify-content:flex-end;">
+    <div style="width:calc(50% - 8px);">
+      <div class="arr-down" style="height:36px;">
+        <div class="arr-line" style="height:18px;"></div>
+        <div class="arr-line" style="height:8px;"></div>
+        <div class="arr-head"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- mAI LLM End Points — the actual model endpoints behind the Azure APIM gateway -->
+  <div style="display:flex;justify-content:flex-end;">
+    <div style="width:calc(50% - 8px);">
+      <div class="zone zone-mai" style="text-align:center;padding:14px 12px;">
+        <span class="zone-label">mAI LLM End Points</span>
+        <div style="font-size:28px;margin:6px 0 4px;">🔄</div>
         <div style="font-size:10.5px;color:#444;margin-top:4px;line-height:1.5;">
-          Open-Elevation API<br>
-          OSRM Road Routing<br>
-          (OpenStreetMap)
-        </div>
-        <div style="margin-top:8px;">
-          <span class="badge badge-y">No authentication required</span><br>
-          <span class="badge badge-y" style="margin-top:3px;">Offline fallback available</span>
+          GPT-5 via Azure OpenAI<br>
+          Claude Sonnet via Amazon Bedrock
         </div>
       </div>
     </div>
-
-  </div><!-- /svc-row -->
+  </div>
 
   <!-- Authentication panel (dashed) -->
   <div class="zone zone-auth" style="margin-top:20px;display:flex;gap:30px;align-items:flex-start;padding:14px 18px;">
@@ -387,12 +378,12 @@
 
     <div style="flex:1;font-size:10.5px;color:#444;line-height:1.6;">
       <strong style="color:#2e7d32;">ArcGIS (Geospatial Data)</strong><br>
-      Private datasets: short-lived Bearer token (14-day expiry) stored as a server-side environment variable. Passed as a URL parameter on FeatureServer API requests. Public datasets require no token.
+      Public datasets only — no authentication required. Requests go directly to the Zambia GeoHub FeatureServer REST API.
     </div>
     <div style="width:1.5px;background:#ccc;align-self:stretch;"></div>
     <div style="flex:1;font-size:10.5px;color:#444;line-height:1.6;">
       <strong style="color:#c62828;">mAI Factory (AI Inference) — Posit Connect OAuth</strong><br>
-      Posit Connect auto-injects a per-session token. Application exchanges it for an Azure AD Bearer token via RFC 8693 token exchange. Bearer token sent to the WBG mAI Factory gateway. No API keys stored in application code.
+      Posit Connect auto-injects a per-session token. Application exchanges it for an Azure AD Bearer token via RFC 8693 token exchange. Bearer token sent to the Azure APIM Gateway (COM Gateway), which routes the request to the mAI LLM End Points (GPT-5 / Claude Sonnet). No API keys stored in application code.
     </div>
   </div>
 
@@ -400,8 +391,8 @@
   <div style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;margin-top:16px;font-size:10px;color:#555;">
     <span>■ <span style="color:#1a3a5c;font-weight:600;">WBG Posit Connect</span> — WBG-managed hosting</span>
     <span>■ <span style="color:#2e7d32;font-weight:600;">Zambia GeoHub</span> — ArcGIS Online / Esri</span>
-    <span>■ <span style="color:#c62828;font-weight:600;">WBG mAI Factory</span> — AI inference gateway</span>
-    <span>■ <span style="color:#b07800;font-weight:600;">Public Services</span> — No auth · Low risk</span>
+    <span>■ <span style="color:#c62828;font-weight:600;">Azure APIM Gateway (COM Gateway)</span> — AI inference gateway</span>
+    <span>■ <span style="color:#c62828;font-weight:600;">mAI LLM End Points</span> — GPT-5 / Claude Sonnet model access</span>
     <span style="color:#888;">— — — Authentication boundary (dashed)</span>
   </div>
 
@@ -477,8 +468,8 @@
       <div class="step-row s7">
         <div class="step-num">7</div>
         <div class="step-box">
-          <div class="step-title">AI Inference — WBG mAI Factory</div>
-          <div class="step-desc">HTTPS POST to WBG mAI Factory (azapimdev.worldbank.org) with Azure AD Bearer token obtained via Posit Connect OAuth exchange. GPT-5 or Claude Sonnet generates the analysis. Response streamed in real time.</div>
+          <div class="step-title">AI Inference — Azure APIM Gateway → mAI LLM End Points</div>
+          <div class="step-desc">HTTPS POST to the Azure APIM Gateway (COM Gateway, azapim.worldbank.org) with Azure AD Bearer token obtained via Posit Connect OAuth exchange. The gateway routes the request to the mAI LLM End Points, which access GPT-5 or Claude Sonnet to generate the analysis. Response streamed in real time.</div>
         </div>
       </div>
       <div class="step-arrow"></div>
@@ -499,11 +490,10 @@
       <div class="side-card">
         <div class="side-card-title">🔐 Authentication Detail</div>
         <p>
-          <strong style="color:#2e7d32;">ArcGIS Bearer Token</strong><br>
-          • Public datasets: no token needed<br>
-          • Private datasets: server-side env variable<br>
-          • 14-day expiry, rotated manually<br>
-          • Never exposed to end user
+          <strong style="color:#2e7d32;">ArcGIS Access</strong><br>
+          • Public datasets only<br>
+          • No authentication required<br>
+          • No tokens stored or exposed
         </p>
         <div style="margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">
           <strong style="color:#c62828;">Posit Connect OAuth (RFC 8693)</strong><br>
@@ -511,6 +501,7 @@
             1. Posit injects <code>SESSION_TOKEN</code> per viewer<br>
             2. App exchanges for Azure AD Bearer<br>
             3. Bearer used to call mAI Factory<br>
+            4. Azure APIM Gateway routes to mAI LLM End Points<br>
             <strong>No AI keys stored in code</strong>
           </p>
         </div>
@@ -533,8 +524,6 @@
         <div class="side-card-title" style="color:#7a5500;">⚡ Resilience</div>
         <p style="line-height:1.7;">
           GeoHub down → offline JSON<br>
-          OSRM down → built-in road graph<br>
-          Elevation down → graceful skip<br>
           App is fully stateless
         </p>
       </div>
@@ -548,7 +537,8 @@
     <div class="leg-item"><div class="leg-dot" style="background:#1a3a5c;"></div>User / Browser</div>
     <div class="leg-item"><div class="leg-dot" style="background:#4527a0;"></div>In-application processing (no external call)</div>
     <div class="leg-item"><div class="leg-dot" style="background:#2e7d32;"></div>Zambia GeoHub — ArcGIS REST API</div>
-    <div class="leg-item"><div class="leg-dot" style="background:#c62828;"></div>WBG mAI Factory — AI inference</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#c62828;"></div>Azure APIM Gateway (COM Gateway) — AI inference</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#c62828;"></div>mAI LLM End Points — GPT-5 / Claude Sonnet</div>
     <div class="leg-item"><div class="leg-dot" style="background:#2e7d32;"></div>Browser display</div>
   </div>
 
