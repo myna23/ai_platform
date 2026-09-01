@@ -3977,7 +3977,36 @@ def process_question(question: str):
                     "uploaded documents. It is useful for country directors, planners, researchers, "
                     "and field teams who need quick data-driven answers about Zambia."
                 )
-            user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
+            # Low-confidence grounding check (OIS recommendation #7) — surfaced both as
+            # an explicit instruction to the model and as a UI banner independent of
+            # what the model actually says, so the limitation is visible even if the
+            # AI's own text omits or downplays it.
+            _low_confidence_reason = ""
+            if _location and not _draw_bbox and not context_dataset and not _is_meta:
+                if not sample_features:
+                    _low_confidence_reason = (
+                        f"No records were found for {_location} in the matched dataset. "
+                        "Do not estimate, infer, or state a number/fact for this location — "
+                        "say plainly that the data is unavailable and suggest trying a "
+                        "nearby district or a different topic."
+                    )
+                elif not st.session_state.get("_last_fetch_was_live", False):
+                    _low_confidence_reason = (
+                        "This answer is based on a pre-loaded offline dataset (the live "
+                        "GeoHub server was unavailable), which may not reflect the most "
+                        "current data. State this limitation explicitly in your answer."
+                    )
+                elif _total_count is not None and _total_count < 3:
+                    _low_confidence_reason = (
+                        f"Only {_total_count} record(s) exist for {_location} in this "
+                        "dataset — too few to draw broad conclusions. Note this low sample "
+                        "size explicitly rather than generalizing from it."
+                    )
+            _confidence_note = f"\n\n⚠️ LOW CONFIDENCE — {_low_confidence_reason}" if _low_confidence_reason else ""
+            if _low_confidence_reason:
+                st.warning(f"⚠️ Low confidence: {_low_confidence_reason}")
+
+            user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note + _confidence_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
 
             # If a map image is attached, send it as a vision message block
             _img_b64 = st.session_state.get("uploaded_img_b64", "")
