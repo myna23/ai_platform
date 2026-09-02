@@ -2127,6 +2127,26 @@ def _extract_location(text: str):
     return (None, None)
 
 
+def _sample_matches_location(sample_features: list, location: str) -> bool:
+    """
+    True if any retrieved row appears to reference the given location by name.
+    Zambia GeoHub datasets vary in their district/province field naming
+    (District, DISTRICT, PovName, DistName, etc.), so this checks row values
+    generically instead of assuming a specific field — a non-empty sample can
+    still contain zero rows for the requested location (e.g. an offline/static
+    fallback sample spans multiple districts), which is exactly the case a
+    low-confidence grounding check needs to catch.
+    """
+    if not location:
+        return True
+    loc_lower = location.lower()
+    for row in sample_features:
+        for v in row.values():
+            if v and loc_lower in str(v).lower():
+                return True
+    return False
+
+
 def _extract_coordinates(text: str):
     """
     Detect lat/lon coordinates typed anywhere in the question.
@@ -3983,9 +4003,10 @@ def process_question(question: str):
             # AI's own text omits or downplays it.
             _low_confidence_reason = ""
             if _location and not _draw_bbox and not context_dataset and not _is_meta:
-                if not sample_features:
+                if not sample_features or not _sample_matches_location(sample_features, _location):
                     _low_confidence_reason = (
-                        f"No records were found for {_location} in the matched dataset. "
+                        f"No records for {_location} specifically were found in the "
+                        "retrieved sample (it may contain records for other locations). "
                         "Do not estimate, infer, or state a number/fact for this location — "
                         "say plainly that the data is unavailable and suggest trying a "
                         "nearby district or a different topic."
