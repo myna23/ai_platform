@@ -4014,9 +4014,16 @@ def process_question(question: str):
             # an explicit instruction to the model and as a UI banner independent of
             # what the model actually says, so the limitation is visible even if the
             # AI's own text omits or downplays it.
-            _low_confidence_reason = ""
+            _low_confidence_reason = ""   # instruction sent to the model
+            _low_confidence_user   = ""   # message shown to the user
             if _location and not _draw_bbox and not context_dataset and not _is_meta:
                 if not sample_features or not _sample_matches_location(sample_features, _location):
+                    # user-facing message, and the separate instruction to the model
+                    _low_confidence_user = (
+                        f"No records for {_location} were found in this dataset. "
+                        "The answer below should not be relied on for a count — "
+                        "try a nearby district, or a different topic."
+                    )
                     _low_confidence_reason = (
                         f"No records for {_location} specifically were found in the "
                         "retrieved sample (it may contain records for other locations). "
@@ -4025,12 +4032,22 @@ def process_question(question: str):
                         "nearby district or a different topic."
                     )
                 elif not st.session_state.get("_last_fetch_was_live", False):
+                    _low_confidence_user = (
+                        "The live Zambia GeoHub service was unavailable, so this answer "
+                        "uses a pre-loaded offline copy of the data. Figures may not "
+                        "reflect the current situation — verify against the live dataset "
+                        "before relying on them."
+                    )
                     _low_confidence_reason = (
                         "This answer is based on a pre-loaded offline dataset (the live "
                         "GeoHub server was unavailable), which may not reflect the most "
                         "current data. State this limitation explicitly in your answer."
                     )
                 elif _total_count is not None and _total_count < 3:
+                    _low_confidence_user = (
+                        f"Only {_total_count} record(s) exist for {_location} in this "
+                        "dataset — too few to draw a general conclusion from."
+                    )
                     _low_confidence_reason = (
                         f"Only {_total_count} record(s) exist for {_location} in this "
                         "dataset — too few to draw broad conclusions. Note this low sample "
@@ -4038,7 +4055,7 @@ def process_question(question: str):
                     )
             _confidence_note = f"\n\n⚠️ LOW CONFIDENCE — {_low_confidence_reason}" if _low_confidence_reason else ""
             if _low_confidence_reason:
-                st.warning(f"⚠️ Low confidence: {_low_confidence_reason}")
+                st.warning(f"⚠️ **Low confidence** — {_low_confidence_user}")
 
             user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note + _confidence_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
 
