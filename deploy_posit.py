@@ -27,8 +27,7 @@ if len(sys.argv) == 4 and sys.argv[2] == "activate":
     import requests as _r
     resp = _r.post(
         f"https://datanalytics-int.worldbank.org/__api__/v1/content/900cfa7d-9dde-443a-b75f-f4b5cad7bfb6/deploy",
-        headers=AUTH2, json={"bundle_id": bundle_id}, verify=False,
-    )
+        headers=AUTH2, json={"bundle_id": bundle_id},    )
     print(resp.status_code, resp.text[:300])
     sys.exit(0)
 
@@ -40,7 +39,6 @@ print("Detaching git repository connection...")
 resp = requests.delete(
     f"{SERVER}__api__/v1/content/{CONTENT_GUID}/repository",
     headers=AUTH,
-    verify=False,
 )
 if resp.ok or resp.status_code == 404:
     print("  Git connection removed (or was already gone)")
@@ -126,7 +124,6 @@ with open(bundle_path, "rb") as f:
         f"{SERVER}__api__/v1/content/{CONTENT_GUID}/bundles",
         headers={"Authorization": f"Key {API_KEY}"},
         files={"archive": ("bundle.tar.gz", f, "application/gzip")},
-        verify=False,
     )
 
 if not resp.ok:
@@ -144,7 +141,6 @@ resp = requests.post(
     f"{SERVER}__api__/v1/content/{CONTENT_GUID}/deploy",
     headers={**AUTH, "Content-Type": "application/json"},
     json={"bundle_id": bundle_id},
-    verify=False,
 )
 
 os.unlink(bundle_path)

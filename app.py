@@ -46,7 +46,7 @@ import io as _io_mod
 import math
 
 # ---------------------------------------------------------------------------
-# Map helper functions — road routing (OSRM) + elevation (Open-Elevation)
+# Map helper functions — road routing (offline Zambia road graph)
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # Offline road network — Zambia highway waypoints (no external API needed)
@@ -149,35 +149,26 @@ def _road_route_offline(city_a, city_b, city_coords):
 
 
 def _osrm_route(lon1, lat1, lon2, lat2):
-    """Return (road_km, drive_seconds, coords) trying OSRM, falls back to offline."""
-    import requests as _req
-    for url in [
-        f"https://routing.openstreetmap.de/routed-car/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson",
-        f"https://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson",
-    ]:
-        try:
-            r = _req.get(url, timeout=6)
-            data = r.json()
-            if data.get("code") == "Ok":
-                route = data["routes"][0]
-                coords = route["geometry"]["coordinates"]
-                if coords and len(coords) > 1:
-                    return route["distance"] / 1000, route["duration"], coords
-        except Exception:
-            continue
+    """
+    Road routing. Returns (road_km, drive_seconds, coords) or (None, None, None).
+
+    External routing services (OSRM / OpenStreetMap routing) were removed under OIS
+    security review (ACN-2026-31023): outbound connections are restricted to the
+    approved WBG endpoints only. Callers fall back to the built-in offline Zambia
+    road graph, which requires no external call.
+    """
     return None, None, None
 
-@st.cache_data(show_spinner=False, ttl=86400)
+
 def _get_elevations(locations):
-    """Return list of elevations (metres) for [(lat,lon),...], or None on failure."""
-    import requests as _req
-    try:
-        payload = {"locations": [{"latitude": la, "longitude": lo} for la, lo in locations]}
-        r = _req.post("https://api.open-elevation.com/api/v1/lookup",
-                      json=payload, timeout=10)
-        return [res["elevation"] for res in r.json()["results"]]
-    except Exception:
-        return None
+    """
+    Elevation lookup. Returns None — callers skip elevation detail gracefully.
+
+    The external elevation service (Open-Elevation) was removed under OIS security
+    review (ACN-2026-31023): outbound connections are restricted to the approved
+    WBG endpoints only.
+    """
+    return None
 
 def _compass(bearing_deg):
     dirs = ["N","NE","E","SE","S","SW","W","NW"]
@@ -855,7 +846,10 @@ def _render_plotly_map(gjson, ds_name="", context_layers=None, highlight_locatio
     else:
         clat, clon, zoom = -13.5, 28.5, 6
 
-    _map_style = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json"
+    # External basemap tile service removed under OIS security review
+    # (ACN-2026-31023) — outbound calls limited to approved WBG endpoints.
+    # Data layers render without an external tile provider.
+    _map_style = None
 
     st.pydeck_chart(_pdk.Deck(
         layers=layers,
@@ -1560,10 +1554,14 @@ with st.sidebar:
             ("GPT-4o mini",   "WB mAI Factory (GPT)",    "gpt-4o-mini"),
         ]
     else:
+        # No WBG provider configured. Direct external AI providers were removed
+        # under OIS security review (ACN-2026-31023) — all inference must route
+        # through the WBG mAI Factory gateway, so the Posit Connect OAuth path is
+        # shown here and will surface a configuration notice until WB_POSIT is set.
         _sb_model_opts = [
-            ("GPT-4o",        "OpenAI (GPT)",       "gpt-4o"),
-            ("GPT-4o mini",   "OpenAI (GPT)",       "gpt-4o-mini"),
-            ("Gemini Flash",  "Google (Gemini)",    "gemini-2.0-flash"),
+            ("GPT-5",       "WB Posit (GPT)",    "gpt-5"),
+            ("GPT-4o",      "WB Posit (GPT)",    "gpt-4o"),
+            ("Sonnet",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
         ]
     _sb_opt_labels = [o[0] for o in _sb_model_opts]
     _sb_opt_models = [o[2] for o in _sb_model_opts]
@@ -1683,7 +1681,6 @@ with st.sidebar:
                 st.session_state["draw_bbox"] = _b
                 _bbx_str = (f"{_b['min_lon']},{_b['min_lat']},"
                             f"{_b['max_lon']},{_b['max_lat']}")
-                _tok = _hub_client_module._ARCGIS_TOKEN
                 _count_datasets = [
                     ("Health facilities",
                      "https://services3.arcgis.com/BU6Aadhn6tbBEdyk/arcgis/rest/services/GRID3_ZMB_HealthFac_v01beta/FeatureServer/0",
@@ -1721,7 +1718,6 @@ with st.sidebar:
                         _p = {"geometry": _bbx_str, "geometryType": "esriGeometryEnvelope",
                               "spatialRel": "esriSpatialRelIntersects",
                               "returnCountOnly": "true", "f": "json"}
-                        if _tok: _p["token"] = _tok
                         _r = _req.get(f"{_url}/query", params=_p, headers=_hdr, timeout=10)
                         _c = _r.json().get("count", 0)
                         if _c and _c > 0:
@@ -1729,7 +1725,6 @@ with st.sidebar:
                                    "spatialRel": "esriSpatialRelIntersects",
                                    "outFields": "*", "resultRecordCount": 20,
                                    "returnGeometry": "true", "f": "json"}
-                            if _tok: _fp["token"] = _tok
                             _fr = _req.get(f"{_url}/query", params=_fp, headers=_hdr, timeout=12)
                             _feats = _fr.json().get("features", [])
                             _names, _subtypes, _nearest_name, _nearest_dist = [], {}, None, float("inf")
@@ -1761,18 +1756,13 @@ with st.sidebar:
 
                 _s2, _w2, _n2, _e2 = _b["min_lat"], _b["min_lon"], _b["max_lat"], _b["max_lon"]
                 _osm_bbox2 = f"({_s2},{_w2},{_n2},{_e2})"
-                _OVERPASS_MIRRORS2 = [
-                    "https://overpass.kumi.systems/api/interpreter",
-                    "https://overpass-api.de/api/interpreter",
-                    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-                ]
                 def _overpass_req2(query_str):
-                    for _mirror2 in _OVERPASS_MIRRORS2:
-                        try:
-                            _r3 = _req.post(_mirror2, data={"data": query_str},
-                                            headers={"User-Agent": "ZambiaGeoHubAI/1.0"}, timeout=20)
-                            if _r3.status_code == 200: return _r3.json()
-                        except Exception: continue
+                    """
+                    OpenStreetMap Overpass lookups were removed under OIS security
+                    review (ACN-2026-31023): outbound connections are restricted to
+                    the approved WBG endpoints only. Returns None so callers display
+                    "—" for these supplementary OSM figures rather than failing.
+                    """
                     return None
 
                 def _fetch_osm_area(label, count_q, detail_q, name_tags, default_name):
@@ -2076,7 +2066,9 @@ def _extract_comparison_locations(text: str):
                 for l in locs
             ]
             # Filter out generic words
-            locs = [l for l in locs if l.lower() not in {"the", "a", "an", "all", "zambia", "africa"}]
+            # Input validation (ACN-2026-31023): both names must be known
+            # Zambian districts/provinces before either reaches a data query.
+            locs = [l for l in locs if _is_valid_place(l)]
             if len(locs) == 2:
                 return locs
     return []
@@ -2092,6 +2084,42 @@ _ZAMBIA_PROVINCES = {
     "lusaka", "copperbelt", "central", "eastern", "northern", "southern",
     "western", "northwestern", "north-western", "luapula", "muchinga",
 }
+
+
+def _build_place_allowlist():
+    """
+    Closed set of valid Zambian district and province names, loaded from the
+    bundled administrative boundary data (116 districts).
+
+    Input validation control (ACN-2026-31023, story 186198): a place name taken
+    from user text is only used in a dataset query if it appears in this list.
+    Anything else is rejected before query construction, so no user-supplied
+    string can reach a query clause.
+    """
+    names = set()
+    try:
+        if _CONTEXT_LAYERS:
+            for feat in _CONTEXT_LAYERS[0]["geojson"].get("features", []):
+                props = feat.get("properties", {}) or {}
+                for key in ("DISTRICT", "District", "PROVINCE", "Province"):
+                    val = props.get(key)
+                    if val:
+                        names.add(str(val).strip().lower())
+    except Exception:
+        pass
+    names |= _ZAMBIA_PROVINCES
+    return names
+
+
+_PLACE_ALLOWLIST = _build_place_allowlist()
+
+
+def _is_valid_place(name: str) -> bool:
+    """True only if `name` is a known Zambian district or province."""
+    if not name:
+        return False
+    return name.strip().lower() in _PLACE_ALLOWLIST
+
 
 def _extract_location(text: str):
     """
@@ -2110,19 +2138,19 @@ def _extract_location(text: str):
     match_of = _re.search(r'\bof\s+([a-zA-Z][a-z]{2,}(?:\s+[a-zA-Z][a-z]{2,})?)', text, _re.IGNORECASE)
     if match_of:
         loc = _re.sub(r'\s+(?:district|province|region)\s*$', '', match_of.group(1).strip(), flags=_re.IGNORECASE).title()
-        if loc.lower() not in {"zambia", "the", "all", "africa"}:
+        if _is_valid_place(loc):
             return (loc, "district")
     # Look for "in/within/around/near/at <place>" — case-insensitive
     match = _re.search(r'\b(?:in|within|around|near|at)\s+([a-zA-Z][a-z]{2,}(?:\s+[a-zA-Z][a-z]{2,})?)', text, _re.IGNORECASE)
     if match:
         loc = _re.sub(r'\s+(?:district|province|region)\s*$', '', match.group(1).strip(), flags=_re.IGNORECASE).title()
-        if loc.lower() not in {"zambia", "the", "all", "zambia province", "africa"}:
+        if _is_valid_place(loc):
             return (loc, "district")
     # Also catch "<place> district" pattern (e.g. "Kalomo district hospitals")
     match2 = _re.search(r'\b([A-Za-z][a-z]{2,}(?:\s+[A-Za-z][a-z]{2,})?)\s+district\b', text, _re.IGNORECASE)
     if match2:
         loc = match2.group(1).strip().title()
-        if loc.lower() not in {"zambia", "the", "all", "africa"}:
+        if _is_valid_place(loc):
             return (loc, "district")
     return (None, None)
 
@@ -2409,9 +2437,8 @@ if st.session_state.get("_draw_map_open"):
         if _city_a and _city_b:
             _ca, _cb = _CITY_COORDS[_city_a], _CITY_COORDS[_city_b]
 
-            # 1. Try live OSRM
-            with st.spinner("Loading route…"):
-                _road_km_pre, _drive_sec_pre, _road_coords = _osrm_route(_ca[1], _ca[0], _cb[1], _cb[0])
+            # 1. External routing removed (ACN-2026-31023) — offline graph used below
+            _road_km_pre, _drive_sec_pre, _road_coords = _osrm_route(_ca[1], _ca[0], _cb[1], _cb[0])
 
             # 2. Offline Zambia road network fallback
             if not _road_coords or len(_road_coords) <= 1:
@@ -2445,7 +2472,7 @@ if st.session_state.get("_draw_map_open"):
         _view_zoom = 5 if not (_city_a and _city_b) else max(4, min(7, int(10 - haversine_km(_ca[0], _ca[1], _cb[0], _cb[1]) / 120)))
 
         if _route_status == "road":
-            st.caption("🟢 Live road route (OSRM)")
+            st.caption("🟢 Road route")
         elif _route_status == "offline":
             st.caption("🔵 Zambia highway route (offline)")
         elif _route_status == "straight":
@@ -2454,7 +2481,7 @@ if st.session_state.get("_draw_map_open"):
         st.pydeck_chart(pdk.Deck(
             layers=_layers,
             initial_view_state=pdk.ViewState(latitude=_view_lat, longitude=_view_lon, zoom=_view_zoom, pitch=0),
-            map_style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+            map_style=None,  # external tile service removed (ACN-2026-31023)
             tooltip={"text": "{name}"},
         ), use_container_width=True, height=430)
 
@@ -2475,9 +2502,8 @@ if st.session_state.get("_draw_map_open"):
                     _rlo2, _rla2 = _road_coords[_ri + 1]
                     _road_km += haversine_km(_rla1, _rlo1, _rla2, _rlo2)
 
-            # Elevation for both cities
-            with st.spinner("Fetching elevation…"):
-                _elevs = _get_elevations([(_ca[0], _ca[1]), (_cb[0], _cb[1])])
+            # Elevation: external service removed (ACN-2026-31023); metrics below are skipped
+            _elevs = _get_elevations([(_ca[0], _ca[1]), (_cb[0], _cb[1])])
 
             # All time estimates based on road km
             if _drive_sec:
@@ -2570,7 +2596,7 @@ if st.session_state.get("_draw_map_open"):
             st.pydeck_chart(pdk.Deck(
                 layers=_rad_layers,
                 initial_view_state=pdk.ViewState(latitude=_rc[0], longitude=_rc[1], zoom=5, pitch=0),
-                map_style="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+                map_style=None,  # external tile service removed (ACN-2026-31023)
                 tooltip={"text": "{name}"},
             ), use_container_width=True, height=430)
 
@@ -2915,14 +2941,10 @@ def process_question(question: str):
                     _where = f"Province='{_location}' OR PROVINCE='{_location}'"
                 else:
                     _where = "1=1"
-                _ctx_tok = _hub_client_module._ARCGIS_TOKEN
-                _ctx_tok_p = {"token": _ctx_tok} if _ctx_tok and any(
-                    org in _base_url for org in ("iQ1dY19aHwbSDYIF", "P3ePLMYs2RVChkJx")
-                ) else {}
                 _resp = _req.get(
                     f"{_base_url}/query",
                     params={"where": _where, "outFields": "*",
-                            "resultRecordCount": 200, "f": "geojson", **_ctx_tok_p},
+                            "resultRecordCount": 200, "f": "geojson"},
                     headers={"Referer": "https://zmb-geowb.hub.arcgis.com",
                              "Origin": "https://zmb-geowb.hub.arcgis.com"},
                     timeout=30,
@@ -3034,11 +3056,6 @@ def process_question(question: str):
                             "Microgrids", "zmb_dams", "zmb_mines",
                         )
                         _needs_bbox = any(kw in _live_candidate.get("url", "") for kw in _BBOX_DATASETS)
-                        # Token for private-org datasets
-                        _tok = _hub_client_module._ARCGIS_TOKEN
-                        _tok_params = {"token": _tok} if _tok and any(
-                            org in _base_url for org in ("iQ1dY19aHwbSDYIF", "P3ePLMYs2RVChkJx")
-                        ) else {}
 
                         if _needs_bbox and _loc_type in ("district", "province"):
                             # Find the matching boundary polygon(s) and compute bounding box
@@ -3072,7 +3089,6 @@ def process_question(question: str):
                                     "geometry": _bbox_str,
                                     "geometryType": "esriGeometryEnvelope",
                                     "spatialRel": "esriSpatialRelIntersects",
-                                    **_tok_params,
                                 }
                                 try:
                                     _cnt_resp = _req.get(f"{_base_url}/query",
@@ -3118,7 +3134,7 @@ def process_question(question: str):
                             try:
                                 _cnt_resp = _req.get(f"{_base_url}/query",
                                     params={"where": _where, "returnCountOnly": "true", "f": "json",
-                                            **_tok_params},
+                                            },
                                     headers=_headers, timeout=15)
                                 _cnt_data = _cnt_resp.json()
                                 if "count" in _cnt_data:
@@ -3129,7 +3145,7 @@ def process_question(question: str):
                             _resp = _req.get(f"{_base_url}/query",
                                 params={"where": _where, "outFields": "*",
                                         "resultRecordCount": 200, "f": "geojson",
-                                        **_tok_params},
+                                        },
                                 headers=_headers, timeout=30)
                             _resp.raise_for_status()
                             _gjson = _resp.json()
@@ -3176,13 +3192,13 @@ def process_question(question: str):
                         _other_where = f"({_other_clause}) AND {_other_poi_clause}" if _other_poi_clause else _other_clause
                         _other_cnt_resp = _req.get(f"{_base_url}/query",
                             params={"where": _other_where, "returnCountOnly": "true", "f": "json",
-                                    **_tok_params},
+                                    },
                             headers=_headers, timeout=15)
                         _other_total = _other_cnt_resp.json().get("count")
                         _other_resp = _req.get(f"{_base_url}/query",
                             params={"where": _other_where, "outFields": "*",
                                     "resultRecordCount": 200, "f": "geojson",
-                                    **_tok_params},
+                                    },
                             headers=_headers, timeout=30)
                         _other_resp.raise_for_status()
                         _other_gjson = _other_resp.json()
@@ -3524,8 +3540,7 @@ def process_question(question: str):
                             import requests as _req
                             _base_url = candidate["url"].rstrip("/")
                             _query_url = f"{_base_url}/query"
-                            _tok = _hub_client_module._ARCGIS_TOKEN
-                            # Apply POI Type filter even in bbox queries
+                                        # Apply POI Type filter even in bbox queries
                             _bbox_where = "1=1"
                             if "Points_of_Interest" in _base_url or "POI" in _base_url:
                                 _q_lower = question.lower()
@@ -3542,8 +3557,6 @@ def process_question(question: str):
                                 "resultRecordCount": 200,
                                 "f": "geojson",
                             }
-                            if _tok:
-                                _draw_params["token"] = _tok
                             _draw_headers = {"Referer": "https://zmb-geowb.hub.arcgis.com",
                                              "User-Agent": "Mozilla/5.0"}
                             _draw_resp = _req.get(_query_url, params=_draw_params,
@@ -4073,14 +4086,19 @@ def process_question(question: str):
                 # Recover any partial text already streamed
                 response = _STREAM_BUFFERS.get(_sess_buf_key, "")
                 _err_str = str(e)
-                print(f"AI ERROR: {_err_str}", flush=True)
+                # Server-side only: log the exception type and message, never a
+                # service response body or token (ACN-2026-31023, story 186216).
+                print(f"AI ERROR [{type(e).__name__}]: {_err_str}", flush=True)
                 if not response:
                     if "overloaded" in _err_str.lower():
                         response = "⚠️ The AI is temporarily overloaded. Please try again in a few seconds."
                     elif "rate_limit" in _err_str.lower():
                         response = "⚠️ Rate limit reached. Please wait a moment and try again."
                     else:
-                        response = f"⚠️ Error: {_err_str}"
+                        # Generic message only — technical detail is not shown to
+                        # the user (ACN-2026-31023, story 186199).
+                        response = ("⚠️ The request could not be completed. Please try again. "
+                                    "If the problem continues, contact the application owner.")
                     _ai_error = True
                     st.warning(response)
             finally:
@@ -4339,7 +4357,23 @@ _chat_placeholder = (
 )
 _chat_result = st.chat_input(_chat_placeholder, accept_file="multiple",
                               file_type=["pdf", "docx", "txt", "png", "jpg", "jpeg", "webp"])
+
+# Data-handling notice for attachments (ACN-2026-31023, story 186189).
+# Attached file content is sent to the WBG mAI Factory for analysis, so users
+# are told not to attach personal or restricted material.
+st.caption(
+    "🔒 **Attachments:** content of any file you attach is sent to the WBG mAI Factory "
+    "for analysis. Do not attach personal data, or Confidential, Restricted, or "
+    "Internal Use Only material. This application is approved for PUBLIC data only."
+)
 if _chat_result:
+    if _chat_result.files:
+        st.warning(
+            "🔒 You attached a file. Its content will be sent to the WBG mAI Factory "
+            "for analysis. Confirm it contains no personal data and no Confidential, "
+            "Restricted, or Internal Use Only material — this application is approved "
+            "for PUBLIC data only."
+        )
     for _af in (_chat_result.files or []):
         _af_name = _af.name.lower()
         if _af_name.endswith((".png", ".jpg", ".jpeg", ".webp")):

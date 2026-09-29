@@ -1,5 +1,8 @@
 # GeoHub AI Assistant — Country Adaptation Guide
 
+> **Note (ACN-2026-31023):** credential-based access was removed from this application. AI access uses the Posit Connect OAuth 2.0 token exchange; Zambia GeoHub public datasets are read anonymously. No `OPENAI_API_KEY`, `ARCGIS_TOKEN`, or other credential is used, stored, or supported.
+
+
 **What this guide is:** A step-by-step playbook covering two scenarios:
 
 - **Part A — Single country swap:** Replace Zambia with a different country (e.g. deploy a Kenya-only version)
@@ -66,11 +69,9 @@ Open the `.env` file in the project root. Change these two values:
 
 ```
 # Old (Zambia)
-ARCGIS_TOKEN=eyJ...your_zambia_token...
 HUB_BASE_URL=https://zmb-geowb.hub.arcgis.com
 
 # New (example: Kenya)
-ARCGIS_TOKEN=eyJ...your_kenya_token...
 HUB_BASE_URL=https://ken-geowb.hub.arcgis.com
 ```
 
@@ -321,7 +322,7 @@ Once the local test works, deploy to Posit Connect (same as Zambia):
 
 1. Push changes to GitHub
 2. In Posit Connect, update the environment variables:
-   - `ARCGIS_TOKEN` — new country token
+   - *(no token required — public datasets only)*
    - `HUB_BASE_URL` — new country Hub URL
 3. Redeploy the app
 
@@ -373,7 +374,7 @@ The World Bank GOST team can help set up a new country Hub. Once it exists, foll
 ## Files Changed Summary (Quick Reference)
 
 ```
-.env                      ← ARCGIS_TOKEN, HUB_BASE_URL
+.env                      ← HUB_BASE_URL (no credentials)
 hub/client.py             ← Hub URL, country tag, dataset names, keyword map, blocklist
 app.py                    ← Branding, languages, coordinate bounds, provinces, cities, roads
 ai/prompts.py             ← Country name, Hub URL in all prompt strings

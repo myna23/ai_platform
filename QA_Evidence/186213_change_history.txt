@@ -1,0 +1,12 @@
+EVIDENCE: Application change history  (story 186213)
+Run on: 2026-09-29
+-----------------------------------------------------------------------
+9231a5f  2026-09-02  myna23  Tighten low-confidence check to verify sample actually matches the requested location
+c5258d4  2026-09-01  myna23  Add low-confidence response disclaimers (OIS recommendation #7)
+1b5ea6f  2026-08-27  myna23  Migrate OpenAI/GPT calls to new mAI Factory maifactory/openai endpoint
+1a030a2  2026-07-30  myna23  Fix comparison-location regex swallowing the topic clause
+609c1ce  2026-07-30  myna23  Fix Compare Two Areas: fetch real data for both locations, not just one
+c85e7d1  2026-07-28  myna23  Fix truststore dependency; remove verify=False workaround
+376934f  2026-07-28  myna23  Fix ModuleNotFoundError: explicitly add app dir to sys.path
+1c0cb1b  2026-07-28  myna23  Fix manifest.json: bump Python 3.9.6 -> 3.11.14, resync file list
+9cf7631  2026-07-02  myna23  Zambia GeoHub AI Assistant — initial release

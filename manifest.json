@@ -17,47 +17,41 @@
     ".devcontainer/devcontainer.json": {
       "checksum": "8f4e3db3a5377558da32c1cbcdc723ac"
     },
-    ".env.example": {
-      "checksum": "51c3f31331df77a177de46f6891f5a50"
-    },
     ".gitignore": {
       "checksum": "06767ec57a1e26e29deb6c5dd8b4e104"
     },
     "ACN_Architecture_Diagrams.html": {
-      "checksum": "fc6107ff1d94ed2a11bded975927a593"
+      "checksum": "7d6732e8c1c4a3273a1be0b6c920b968"
     },
     "ACN_Zambia_GeoHub_AI_Solution_Architecture.md": {
-      "checksum": "efd674a18ee18f09ac93547101b2fe51"
+      "checksum": "9e41d3128ff36d6ecddd2764bba2f8e0"
     },
     "CONTRIBUTING.md": {
-      "checksum": "7dc3ea1a74ff4a153fdf0e71dc8c9a43"
+      "checksum": "ec7d30085fcca57076bb05a2018ac3d8"
     },
     "COUNTRY_ADAPTATION_GUIDE.md": {
-      "checksum": "1bfd2015ddd20056ac048ff8b7ccdaba"
+      "checksum": "c1f907c0a4a61246642f25da3aad799c"
     },
     "README.md": {
-      "checksum": "2dcde9f2cdf976a74e602cacd7cc1c2e"
+      "checksum": "d460c76feff0cdee34344f6b4ac3a88b"
     },
     "Zambia_GeoHub_AI_System_Explained.md": {
-      "checksum": "26eb3c84ca21e915afef25ed7d3b6017"
+      "checksum": "fd983f884667af284803a6904562e224"
     },
     "ai/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "ai/model_client.py": {
-      "checksum": "495b563b6b2f25144e9d2b6009fa05d3"
+      "checksum": "832167e9066dfd3d896e419b65d1b0f4"
     },
     "ai/prompts.py": {
-      "checksum": "863bbe471ddaf2e6d9eac3f8ceb3f707"
+      "checksum": "50657519a012d6e708528e7f07bf0720"
     },
     "app.py": {
-      "checksum": "116676d3abf05edafa3b21c21e3a2737"
+      "checksum": "0e55ea2d8664e868b0134e71f0641d35"
     },
     "backend_architecture.html": {
       "checksum": "76d1adec670907917b87fe012c65b356"
-    },
-    "build_acn_docx.py": {
-      "checksum": "29e239bfa575f9579d3a27f96d14864d"
     },
     "components/chat_input/index.html": {
       "checksum": "8f1ce45496bea6d1978dd8ebc4de14b6"
@@ -161,26 +155,11 @@
     "data/wetlands.json": {
       "checksum": "d0d4fb8dd752ba33b3af1827ae76990e"
     },
-    "deploy_posit.py": {
-      "checksum": "c81723e18d014f27d4508b7a82968e2c"
-    },
     "hub/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
-    "hub/arcgis_client.py": {
-      "checksum": "654d39c6daa2d78e373a5e56fbe0d2d3"
-    },
     "hub/client.py": {
-      "checksum": "7baac146f9a05b6eb639cd47918b04a9"
-    },
-    "hub/mcp_server.py": {
-      "checksum": "56ac66e76fb73ef34521dc22d72a206f"
-    },
-    "refresh_arcgis_token.py": {
-      "checksum": "4f875982fdd04e9278dfad8c69eaf532"
-    },
-    "refresh_mai_token.py": {
-      "checksum": "e1a8cec855d2adb5ef36e20b815ae896"
+      "checksum": "a6d49c63b0dfe1e336b0097c0dcc0eef"
     },
     "reports/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
@@ -189,7 +168,7 @@
       "checksum": "fe83207507f076c7a71a8e86a8a9d11d"
     },
     "requirements.txt": {
-      "checksum": "205ee2f423e46a835641325f4f4b19b6"
+      "checksum": "9553fcc2862750a9a11c096a68615f0b"
     },
     "utils/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"

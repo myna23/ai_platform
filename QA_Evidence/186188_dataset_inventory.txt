@@ -1,0 +1,91 @@
+DATASET INVENTORY — data classification
+Story 186188 | ACN-2026-31023 | Zambia Geospatial Intelligence Assistant
+==============================================================================
+Generated:    2026-09-29
+Environment:  Posit Connect QA
+Source:       application dataset catalogue (hub/client.py)
+
+Every dataset the application can query is PUBLIC — published openly on the
+Zambia GeoHub and served by ArcGIS Online without authentication. The
+application holds no ArcGIS credential and is therefore technically incapable
+of retrieving any other classification tier.
+
+Datasets in catalogue: 62
+------------------------------------------------------------------------------
+    #  Dataset                                            Class    Served by
+------------------------------------------------------------------------------
+    1. Zambia Health Facilities (NSDI)                    PUBLIC   services3.arcgis.com
+    2. Zambia Education Facilities                        PUBLIC   services3.arcgis.com
+    3. Zambia Administrative Districts                    PUBLIC   services3.arcgis.com
+    4. Zambia Settlement Names                            PUBLIC   services3.arcgis.com
+    5. Zambia Risk Indicators by District & Province      PUBLIC   services3.arcgis.com
+    6. Flood Prone Districts in Zambia                    PUBLIC   services3.arcgis.com
+    7. OSM Zambia Rivers                                  PUBLIC   services3.arcgis.com
+    8. Zambia Wetlands and Lakes                          PUBLIC   services3.arcgis.com
+    9. Zambia Biodiversity Data                           PUBLIC   services6.arcgis.com
+   10. Zambia Forests Data                                PUBLIC   services6.arcgis.com
+   11. Zambia Biodiversity Point Data                     PUBLIC   services6.arcgis.com
+   12. Zambia Major Roads                                 PUBLIC   services3.arcgis.com
+   13. Lusaka Townships Risk Layers                       PUBLIC   services3.arcgis.com
+   14. Zambia Provincial Boundaries (Admin 1)             PUBLIC   services.arcgis.com
+   15. Zambia District Boundaries (Admin 2)               PUBLIC   services.arcgis.com
+   16. Zambia National Boundary (Admin 0)                 PUBLIC   services.arcgis.com
+   17. Zambia Onshore Aquaculture Suitability Zones       PUBLIC   services.arcgis.com
+   18. Zambia Lake Kariba Cage Aquaculture Suitability Zo PUBLIC   services.arcgis.com
+   19. Zambia Agriculture Blocks and Camps                PUBLIC   services3.arcgis.com
+   20. Zambia Constituencies                              PUBLIC   services3.arcgis.com
+   21. Zambia National Parks and Game Management Areas    PUBLIC   services3.arcgis.com
+   22. Zambia Forest Reserves                             PUBLIC   services3.arcgis.com
+   23. Zambia Erosion Hazard Classification               PUBLIC   services3.arcgis.com
+   24. Zambia Soil Type Classification                    PUBLIC   services3.arcgis.com
+   25. Zambia Settlement Extents                          PUBLIC   services3.arcgis.com
+   26. Zambia Power Lines                                 PUBLIC   services.arcgis.com
+   27. Zambia Power Stations and Substations              PUBLIC   services.arcgis.com
+   28. Zambia Power Infrastructure Areas                  PUBLIC   services.arcgis.com
+   29. Zambia Marketplaces (Building Footprints)          PUBLIC   services.arcgis.com
+   30. Zambia Marketplaces (Points)                       PUBLIC   services.arcgis.com
+   31. Zambia Points of Interest (Overture)               PUBLIC   services.arcgis.com
+   32. Zambia Road Network (Overture)                     PUBLIC   services.arcgis.com
+   33. Zambia Education Facilities (Building Footprints)  PUBLIC   services.arcgis.com
+   34. Zambia Education Facilities (Points)               PUBLIC   services.arcgis.com
+   35. Zambia Health Facilities (Building Footprints)     PUBLIC   services.arcgis.com
+   36. Zambia Health Facilities (Points, Overture)        PUBLIC   services.arcgis.com
+   37. Zambia Building Footprints                         PUBLIC   services.arcgis.com
+   38. Zambia Relative Wealth Index                       PUBLIC   services.arcgis.com
+   39. Lobito Corridor Railway Stations                   PUBLIC   services.arcgis.com
+   40. Zambia Railway Network (Lobito Corridor)           PUBLIC   services.arcgis.com
+   41. Zambia Population 2025 (WorldPop)                  PUBLIC   services.arcgis.com
+   42. Zambia Administrative District Boundaries 2022     PUBLIC   services.arcgis.com
+   43. Zambia NSDI Operational Schools                    PUBLIC   services.arcgis.com
+   44. Zambia Dams                                        PUBLIC   services.arcgis.com
+   45. Zambia Decentralised Renewable Energy Atlas        PUBLIC   services.arcgis.com
+   46. Zambia DRE Settlement Polygons (Energy Access)     PUBLIC   services.arcgis.com
+   47. Zambia DRE Settlement Points (Energy Access)       PUBLIC   services.arcgis.com
+   48. Zambia Own Source Revenue by Local Authority 2024  PUBLIC   services.arcgis.com
+   49. Zambia NSDI Operational Health Facilities          PUBLIC   services.arcgis.com
+   50. Zambia Existing Microgrids                         PUBLIC   services.arcgis.com
+   51. Zambia Distribution MV Overhead Lines              PUBLIC   services.arcgis.com
+   52. Zambia High Voltage (HV) Transmission Lines        PUBLIC   services.arcgis.com
+   53. Zambia Distribution MV Underground Lines           PUBLIC   services.arcgis.com
+   54. Zambia Mines (OSM)                                 PUBLIC   services.arcgis.com
+   55. Zambia Mines (COD Points)                          PUBLIC   services.arcgis.com
+   56. Zambia Constituency Poverty Index                  PUBLIC   services.arcgis.com
+   57. Zambia Health Facilities 2025 (MFL)                PUBLIC   services.arcgis.com
+   58. Zambia Aquifers                                    PUBLIC   services.arcgis.com
+   59. Zambia Net Migration by District 2000-2019         PUBLIC   services.arcgis.com
+   60. Zambia Administrative Boundaries 2023              PUBLIC   services.arcgis.com
+   61. Zambia Marketplaces — Places                       PUBLIC   services.arcgis.com
+   62. Zambia Marketplaces — Buildings                    PUBLIC   services.arcgis.com
+------------------------------------------------------------------------------
+  Total 62   |   PUBLIC 62   |   Internal Use Only 0   |   Restricted 0
+
+CLASSIFICATION BASIS
+------------------------------------------------------------------------------
+  1. All datasets are published openly on the Zambia GeoHub
+     (zmb-geowb.hub.arcgis.com) and are retrievable anonymously.
+  2. Records contain facility names, categories and coordinates only.
+     No personal data is present in any dataset in scope.
+  3. The application sends no credential with any ArcGIS request, so a
+     non-public layer would return an authorisation error rather than data.
+  4. Private/token-gated access was removed from scope under OIS review —
+     see story 186182 for the code-level removal evidence.

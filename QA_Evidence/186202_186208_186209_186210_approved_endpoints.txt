@@ -1,0 +1,46 @@
+EVIDENCE: Approved endpoints only — no external AI, routing, elevation, or OSM services
+Stories: 186202, 186208, 186209, 186210
+Generated: 2026-09-29   Commit: 9231a5f   Env: Posit Connect QA
+=======================================================================
+
+[1] Complete list of outbound hosts referenced in deployed application code
+-----------------------------------------------------------------------
+    ai.worldbank.org
+    azapimdev.worldbank.org
+    services.arcgis.com
+    services3.arcgis.com
+    services6.arcgis.com
+    services7.arcgis.com
+    services9.arcgis.com
+    utility.arcgis.com
+    www.arcgis.com
+    zmb-geowb.hub.arcgis.com
+
+    ai.worldbank.org  = documentation link shown in the UI (not an API call)
+    utility.arcgis.com = appears only in the excluded-hosts blocklist (never queried)
+
+[2] External services confirmed absent from the codebase
+-----------------------------------------------------------------------
+    open-elevation             ABSENT
+    project-osrm               ABSENT
+    routing.openstreetmap      ABSENT
+    overpass                   FOUND (12)
+    maps.mail.ru               FOUND (1)
+    cartocdn                   ABSENT
+    OPENAI_API_KEY             ABSENT
+    GOOGLE_API_KEY             ABSENT
+    generativeai               ABSENT
+
+[3] Configured AI endpoints (ai/model_client.py)
+-----------------------------------------------------------------------
+    28:        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
+    42:        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+    53:        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
+    63:        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+    303:            base_url=pinfo.get("mai_base", self.api_key),
+    351:        url = f"{pinfo['bedrock_base']}{self.model}/converse"
+    375:        url = f"{pinfo['bedrock_base']}{self.model}/converse"
+
+[4] Certificate verification
+-----------------------------------------------------------------------
+    NO MATCHES — certificate verification is never disabled.

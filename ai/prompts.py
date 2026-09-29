@@ -21,7 +21,7 @@ def tool_use_system_prompt() -> str:
         "- Always call search_datasets first if you are unsure which dataset to use.\n"
         "- Always call count_features when the user asks 'how many' — never guess a number.\n"
         "- Call fetch_features to get actual names, types, districts, and provinces.\n"
-        "- For Draw Area questions, use count_features_in_bbox and overpass_count.\n"
+        "- For Draw Area questions, use count_features_in_bbox.\n"
         "- A result with 'verified: true' means the number came from the live API — "
         "state it directly and confidently, like: 'There are exactly 312 health facilities in Lusaka.'\n"
         "- Never invent statistics or dataset names. If a tool returns an error, say so.\n"

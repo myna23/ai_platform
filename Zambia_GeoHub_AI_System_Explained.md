@@ -1,4 +1,7 @@
 # Zambia GeoHub AI Assistant — Full System Explanation
+
+> **Note (ACN-2026-31023):** credential-based access was removed from this application. AI access uses the Posit Connect OAuth 2.0 token exchange; Zambia GeoHub public datasets are read anonymously. No `OPENAI_API_KEY`, `ARCGIS_TOKEN`, or other credential is used, stored, or supported.
+
 ### From Architecture to Plain Language
 
 ---
@@ -156,7 +159,6 @@ https://services3.arcgis.com/.../FeatureServer/0/query
   &outFields=*
   &resultRecordCount=200
   &f=geojson
-  &token=<ARCGIS_TOKEN>
 ```
 
 This returns a GeoJSON response — a standard geographic data format — with feature records containing coordinates and attributes (name, type, district, etc.)
@@ -301,8 +303,8 @@ The user prompt contains:
 **Deployment:** Automatic — every `git push` to the `main` branch on GitHub triggers a redeploy within 2–3 minutes
 
 **Environment variables** (stored in Streamlit Cloud secrets, not in code):
-- `OPENAI_API_KEY` — access to AI
-- `ARCGIS_TOKEN` — access to GeoHub private datasets
+- *(no credential required — Posit Connect OAuth token exchange)*
+- *(no ArcGIS credential — public datasets only)*
 - `AI_MODEL` — which AI version to use (currently gpt-4o)
 - `HUB_BASE_URL` — the GeoHub base URL
 - `MAX_FEATURES` — cap on features fetched per query (200)

@@ -343,11 +343,13 @@ def build_docx(md_path: str, out_path: str):
     cap1 = doc.add_paragraph(
         'The diagram above shows the full deployment architecture: '
         'user browser → WBG Posit Connect (Streamlit app) → '
-        'Zambia GeoHub (ArcGIS FeatureServer) + WBG mAI Factory (GPT-5 / Claude Sonnet 4) + '
-        'Public APIs (Open-Elevation, OSRM). '
-        'All connections use HTTPS. Authentication detail: '
-        'Posit Connect OAuth token exchange (RFC 8693) for mAI Factory; '
-        'ArcGIS Bearer token for private Hub datasets.'
+        'Zambia GeoHub (ArcGIS FeatureServer, public datasets) + '
+        'WBG mAI Factory via Azure APIM Gateway (GPT-5 / Claude Sonnet). '
+        'All connections use HTTPS with certificate validation enforced. '
+        'Authentication detail: Posit Connect OAuth token exchange (RFC 8693) for '
+        'mAI Factory. Zambia GeoHub public datasets require no credential — '
+        'private/token-based dataset access was removed from scope under '
+        'ACN-2026-31023.'
     )
     cap1.paragraph_format.space_before = Pt(4)
     cap1.paragraph_format.space_after  = Pt(18)
