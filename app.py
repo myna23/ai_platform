@@ -2121,6 +2121,28 @@ def _is_valid_place(name: str) -> bool:
     return name.strip().lower() in _PLACE_ALLOWLIST
 
 
+def _rejected_place(text: str):
+    """
+    Return a place-like word from the question that is NOT a known Zambian
+    district or province, or None.
+
+    Used to tell the user their location was not recognised rather than
+    silently answering without a location filter (ACN-2026-31023, story 186198).
+    """
+    _SKIP = {"zambia", "the", "all", "africa", "terms", "district", "province",
+             "region", "area", "areas", "total", "number", "data", "dataset"}
+    for m in _re.finditer(
+            r'\b(?:in|within|around|near|at|of|for)\s+([A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,})?)',
+            text):
+        cand = _re.sub(r'\s+(?:district|province|region)\s*$', '', m.group(1).strip(),
+                       flags=_re.IGNORECASE).strip()
+        if cand.lower() in _SKIP:
+            continue
+        if not _is_valid_place(cand):
+            return cand
+    return None
+
+
 def _extract_location(text: str):
     """
     Extract a district/province name from a question.
@@ -4016,6 +4038,26 @@ def process_question(question: str):
             # AI's own text omits or downplays it.
             _low_confidence_reason = ""   # instruction sent to the model
             _low_confidence_user   = ""   # message shown to the user
+
+            # The question named a place that is not a known Zambian district or
+            # province. Say so rather than silently answering without a location
+            # filter (ACN-2026-31023, stories 186198 / 186204).
+            if not _location and not _draw_bbox and not _is_meta:
+                _unknown_place = _rejected_place(question)
+                if _unknown_place:
+                    _low_confidence_user = (
+                        f"\u201c{_unknown_place}\u201d was not recognised as a Zambian district "
+                        "or province, so the answer below is not filtered to that "
+                        "location. Check the spelling, or try a nearby district."
+                    )
+                    _low_confidence_reason = (
+                        f"The user asked about \u201c{_unknown_place}\u201d, which is not a known "
+                        "Zambian district or province, so no location filter was "
+                        "applied and the records provided are not specific to it. "
+                        "State this clearly and do not present any count as being "
+                        "for that location."
+                    )
+
             if _location and not _draw_bbox and not context_dataset and not _is_meta:
                 if not sample_features or not _sample_matches_location(sample_features, _location):
                     # user-facing message, and the separate instruction to the model
