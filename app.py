@@ -2979,7 +2979,10 @@ def process_question(question: str):
                 sample_features = geojson_to_sample_rows(geojson, n=len(live_feats))
                 map_geojson = {"type": "FeatureCollection", "features": live_feats[:200]}
             except Exception as _ctx_e:
-                st.warning(f"⚠️ Could not load data for {_location or 'this dataset'}: {_ctx_e}")
+                # Detail logged server-side only (ACN-2026-31023, stories 186199/186216)
+                print(f"GEOHUB CONTEXT FETCH ERROR [{_location}]: {_ctx_e}", flush=True)
+                st.warning(f"⚠️ Could not load data for {_location or 'this dataset'}. "
+                           f"The live GeoHub server may be temporarily unavailable.")
     else:
         # Detect meta-questions about the Hub itself (not data queries)
         _q_lower_meta = question.lower()
@@ -3511,10 +3514,15 @@ def process_question(question: str):
                     datasets = [_live_candidate or _static_candidate] + [
                         d for d in datasets if d not in (_live_candidate, _static_candidate)
                     ]
-                _err_detail = f" (error: {_live_error})" if _live_error else ""
+                # Technical detail (service URLs, query parameters, org identifiers)
+                # is logged server-side only and never shown to the user
+                # (ACN-2026-31023, stories 186199 / 186216).
+                if _live_error:
+                    print(f"GEOHUB FETCH ERROR [{_location}]: {_live_error}", flush=True)
                 st.warning(
-                    f"⚠️ Could not load live data for **{_location}**{_err_detail}. "
-                    f"The live GeoHub server may be temporarily unavailable."
+                    f"⚠️ Could not load live data for **{_location}**. "
+                    f"The live GeoHub server may be temporarily unavailable — "
+                    f"the answer below uses pre-loaded offline data."
                 )
                 if _radius_km:
                     # For radius queries: don't set a placeholder — let the countrywide
