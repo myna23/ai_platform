@@ -1,0 +1,42 @@
+SAMPLE API REQUEST / RESPONSE — unauthenticated public retrieval
+Story 186188 | ACN-2026-31023
+==============================================================================
+Run: 2026-09-29 17:06   Environment: QA equivalent (same public endpoint)
+
+REQUEST — note: no token, no Authorization header, no credential of any kind
+------------------------------------------------------------------------------
+  GET https://services3.arcgis.com/BU6Aadhn6tbBEdyk/arcgis/rest/services/GRID3_ZMB_School_v01beta/FeatureServer/0/query
+      where = District='Lusaka'
+      outFields = *
+      resultRecordCount = 2
+      f = geojson
+
+RESPONSE — HTTP 200
+------------------------------------------------------------------------------
+  Features returned: 2
+  Fields per record: 14
+
+  First record (illustrates field content — no personal data):
+      FID                    7019
+      GlobalID               35LPC349854_001
+      Type                   School
+      SubType                School
+      Name                   Baobab School
+      Orig_Name              baobab trust
+      Source                 MoGE
+      Province               Lusaka
+      Prov_Code              105
+      District               Lusaka
+      Distr_Code             105006
+      LAT                    -15.5044800002
+
+  Assessment: records contain facility name, type, and administrative
+  area only. No personal identifiers of any kind.
+
+==============================================================================
+CONTROL TEST — restricted layer without credential
+------------------------------------------------------------------------------
+  GET https://services7.arcgis.com/dZosTnbDNAhfMkt3/arcgis/rest/services/ZMB_Form_1_view/FeatureServer/0/query  (a token-required layer)
+  RESULT: HTTP 200 — ArcGIS error 499: Token Required
+  Confirms the application cannot retrieve non-public layers: without a
+  credential the service refuses the request and returns no data.

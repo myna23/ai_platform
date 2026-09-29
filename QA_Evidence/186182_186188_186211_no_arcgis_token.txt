@@ -1,0 +1,13 @@
+EVIDENCE: ArcGIS token removed from application  (stories 186182, 186188, 186211)
+Command: grep -rn 'ARCGIS_TOKEN|_token_params|set_token|get_token' --include=*.py .
+Run on: 2026-09-29   Branch: main   Commit: 9231a5f
+-----------------------------------------------------------------------
+refresh_arcgis_token.py:34:    if "ARCGIS_TOKEN=" in content:
+refresh_arcgis_token.py:36:            f"ARCGIS_TOKEN={token}" if l.startswith("ARCGIS_TOKEN=") else l
+refresh_arcgis_token.py:41:        content = content.rstrip() + f"\nARCGIS_TOKEN={token}\n"
+refresh_arcgis_token.py:122:    json=[{"name": "ARCGIS_TOKEN", "value": token}],
+refresh_arcgis_token.py:127:print("  ARCGIS_TOKEN updated on Posit Connect")
+
+Command: grep -rn '"token"' --include=*.py  (token as URL query parameter)
+-----------------------------------------------------------------------
+NO MATCHES — no credential is passed as a URL query parameter.

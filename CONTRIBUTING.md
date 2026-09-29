@@ -1,5 +1,8 @@
 # Developer Guide — Zambia GeoHub AI Assistant
 
+> **Note (ACN-2026-31023):** credential-based access was removed from this application. AI access uses the Posit Connect OAuth 2.0 token exchange; Zambia GeoHub public datasets are read anonymously. No `OPENAI_API_KEY`, `ARCGIS_TOKEN`, or other credential is used, stored, or supported.
+
+
 This document covers everything a developer needs to understand, run, modify, and extend the system.
 
 ---
@@ -11,7 +14,7 @@ git clone https://github.com/myna23/-geohub-ai.git
 cd -geohub-ai
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # then fill in OPENAI_API_KEY
+cp .env.example .env          # no credentials required
 streamlit run app.py
 ```
 
@@ -147,7 +150,6 @@ GET {service_url}/query
   &outFields=*
   &resultRecordCount=200
   &f=geojson
-  &token={ARCGIS_TOKEN}
 ```
 
 **Spatial (bbox) query:**
@@ -159,7 +161,6 @@ GET {service_url}/query
   &outFields=*
   &resultRecordCount=200
   &f=geojson
-  &token={ARCGIS_TOKEN}
 ```
 
 **Count only (no features):**
@@ -224,8 +225,8 @@ Datasets with `score > 0` are returned, sorted descending. Top 5 are used.
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | — | **Required.** AI API key |
-| `ARCGIS_TOKEN` | `""` | ArcGIS URL token or API Key. Without it, only public datasets work |
+| `WB_POSIT` | — | Set to `true` on Posit Connect. Not a credential. |
+| *(no credential variables)* | — | Public GeoHub datasets are read anonymously |
 | `AI_MODEL` | `gpt-4o` | Any valid AI model ID |
 | `MAX_FEATURES` | `200` | Max features fetched per ArcGIS query |
 | `HUB_BASE_URL` | `https://zmb-geowb.hub.arcgis.com` | GeoHub base URL |

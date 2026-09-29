@@ -331,32 +331,11 @@ def execute_tool(tool_name: str, tool_input: dict) -> Any:
         n, e  = tool_input["max_lat"], tool_input["max_lon"]
         bbox  = f"({s},{w},{n},{e})"
 
-        _QUERIES = {
-            "mines":    f'[out:json][timeout:20];(node["industrial"="mine"]{bbox};way["industrial"="mine"]{bbox};node["landuse"="quarry"]{bbox};way["landuse"="quarry"]{bbox};);out count;',
-            "dams":     f'[out:json][timeout:20];(node["waterway"="dam"]{bbox};way["waterway"="dam"]{bbox};node["man_made"="dam"]{bbox};way["man_made"="dam"]{bbox};);out count;',
-            "churches": f'[out:json][timeout:20];(node["amenity"="place_of_worship"]["religion"="christian"]{bbox};way["amenity"="place_of_worship"]["religion"="christian"]{bbox};);out count;',
-            "mosques":  f'[out:json][timeout:20];(node["amenity"="place_of_worship"]["religion"="muslim"]{bbox};way["amenity"="place_of_worship"]["religion"="muslim"]{bbox};);out count;',
-            "markets":  f'[out:json][timeout:20];(node["amenity"="marketplace"]{bbox};way["amenity"="marketplace"]{bbox};node["shop"~"supermarket|mall|convenience|general"]{bbox};);out count;',
-        }
-        _MIRRORS = [
-            "https://overpass.kumi.systems/api/interpreter",
-            "https://overpass-api.de/api/interpreter",
-            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-        ]
-        query = _QUERIES.get(ftype, "")
-        if not query:
-            return {"error": f"Unknown feature type: {ftype}", "count": 0}
-
-        for mirror in _MIRRORS:
-            try:
-                r = _req.post(mirror, data={"data": query},
-                              headers={"User-Agent": "ZambiaGeoHubAI/1.0"}, timeout=20)
-                if r.status_code == 200:
-                    count = int((r.json().get("elements") or [{}])[0].get("tags", {}).get("total", 0))
-                    return {"count": count, "feature_type": ftype, "source": "OpenStreetMap", "verified": True}
-            except Exception:
-                continue
-        return {"error": "All Overpass mirrors failed", "count": 0, "verified": False}
+        # External OpenStreetMap Overpass mirrors were removed under OIS security
+        # review (ACN-2026-31023): outbound connections are restricted to approved
+        # WBG endpoints only. This tool is disabled and returns no count.
+        return {"error": "OSM Overpass lookups are disabled (ACN-2026-31023)",
+                "count": 0, "verified": False}
 
     # ── get_catalog ──────────────────────────────────────────────────────
     elif tool_name == "get_catalog":

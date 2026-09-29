@@ -1,0 +1,14 @@
+EVIDENCE: TLS certificate validation enforced  (story 186209)
+Run on: 2026-09-29   Commit: 9231a5f
+-----------------------------------------------------------------------
+Command: grep -rn 'verify=False|verify = False|ssl._create_unverified' --include=*.py .
+NO MATCHES — certificate verification is not disabled anywhere in the project.
+
+Trust store injection (hub/client.py) — uses OS trust store incl. WBG internal CAs:
+19:    import truststore
+20-    truststore.inject_into_ssl()
+21-except Exception:
+22-    pass
+
+Declared dependency (requirements.txt):
+17:truststore>=0.9.1

@@ -1,0 +1,18 @@
+EVIDENCE: Data sent to AI is limited  (stories 186203, 186191)
+Run on: 2026-09-29   Commit: 9231a5f
+-----------------------------------------------------------------------
+Retrieval cap — 200 records per query (app.py):
+2922:                            "resultRecordCount": 200, "f": "geojson"},
+3122:                                        "resultRecordCount": 200, "f": "geojson",
+3175:                                    "resultRecordCount": 200, "f": "geojson",
+3532:                                "resultRecordCount": 200,
+
+AI transmission cap — 15 sample records (ai/prompts.py):
+131:        fields_str = ", ".join(f["name"] for f in ds.get("fields", [])[:15])
+237:            f"```json\n{json.dumps(sample_features[:15], indent=2)}\n```\n"
+
+Prompt construction — exactly what is sent to the AI service (ai/prompts.py):
+236:            f"Sample records from top dataset ({len(sample_features)} records loaded):\n"
+237-            f"```json\n{json.dumps(sample_features[:15], indent=2)}\n```\n"
+238-        )
+239-        # Pre-aggregate by key categorical fields so AI can answer counting questions

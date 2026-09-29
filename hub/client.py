@@ -34,57 +34,11 @@ load_dotenv()
 MAX_FEATURES = int(os.getenv("MAX_FEATURES", "200"))
 REQUEST_TIMEOUT = 30
 
-# ArcGIS token — unlocks private datasets in the Zambia GeoHub org.
-# Set via ARCGIS_TOKEN in .env (run get_token.py to obtain).
-_ARCGIS_TOKEN = os.getenv("ARCGIS_TOKEN", "")
-
-# Org IDs whose services require the token
-_TOKEN_ORGS = {"iQ1dY19aHwbSDYIF", "P3ePLMYs2RVChkJx"}
-
-# Set to True when a 499 Token Required error is detected — signals app.py to show refresh UI
-token_expired: bool = False
-
-
-def set_token(new_token: str):
-    """
-    Update the active token at runtime (called from app.py when user pastes a new token).
-    Also persists it to .env so it survives restarts.
-    """
-    global _ARCGIS_TOKEN, token_expired
-    _ARCGIS_TOKEN = new_token.strip()
-    token_expired = False
-    # Persist to .env
-    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-    try:
-        try:
-            with open(env_path) as f:
-                content = f.read()
-        except FileNotFoundError:
-            content = ""
-        if "ARCGIS_TOKEN=" in content:
-            lines = [
-                f"ARCGIS_TOKEN={_ARCGIS_TOKEN}" if l.startswith("ARCGIS_TOKEN=") else l
-                for l in content.splitlines()
-            ]
-            content = "\n".join(lines) + "\n"
-        else:
-            content = content.rstrip() + f"\nARCGIS_TOKEN={_ARCGIS_TOKEN}\n"
-        with open(env_path, "w") as f:
-            f.write(content)
-    except Exception:
-        pass  # Non-fatal — token is still active in memory
-
-
-def _needs_token(url: str) -> bool:
-    """Return True if this URL belongs to a private org that requires the token."""
-    return any(org in url for org in _TOKEN_ORGS)
-
-
-def _token_params(url: str) -> dict:
-    """Return {"token": ...} if needed, else {}."""
-    if _ARCGIS_TOKEN and _needs_token(url):
-        return {"token": _ARCGIS_TOKEN}
-    return {}
+# NOTE: ArcGIS token-based access to private datasets was removed from this
+# application's scope during OIS security architecture review (ACN-2026-31023).
+# The application queries PUBLIC Zambia GeoHub datasets only, which require no
+# authentication. No token is obtained, stored, or transmitted — in particular,
+# no credential is ever passed as a URL query parameter.
 
 # ---------------------------------------------------------------------------
 # Static sample data — used as fallback when the live FeatureServer is
@@ -268,7 +222,8 @@ _BROKEN_URLS = {
     "https://services7.arcgis.com/dZosTnbDNAhfMkt3/arcgis/rest/services/ZMB_Form_1_view/FeatureServer/0",  # token required
     "https://services9.arcgis.com/zdTKtWQehTjbybEv/arcgis/rest/services/Affected_Adm2_ZMB/FeatureServer/0",  # token required
     "https://utility.arcgis.com/usrsvcs/servers/8b00a549b01f435eaafa076452e3ee05/rest/services/ZMB_Boundaries/FeatureServer/0",  # 403
-    "https://gis.logcluster.org/server/rest/services/Zambia/zmb_trs_roads_s_w_viewer/MapServer/0",  # MapServer not started (500)
+    # gis.logcluster.org entry removed as redundant — the host is already blocked
+    # via _BROKEN_HOSTS above, so no URL for it is ever queried.
 }
 
 
@@ -438,7 +393,6 @@ class HubClient:
             "outFields": "*",
             "resultRecordCount": geom_limit,
             "f": "geojson",
-            **_token_params(base),
         }
         try:
             resp = self.session.get(f"{base}/query", params=params, timeout=REQUEST_TIMEOUT)
@@ -450,9 +404,9 @@ class HubClient:
         if "error" in geojson:
             err = geojson["error"]
             if err.get("code") in (499, 498):
-                global token_expired
-                token_expired = True
-                geojson = {"features": []}  # fall through to static data below
+                # Auth-required response from a non-public layer. Public-only scope:
+                # fall through to static data rather than attempting authentication.
+                geojson = {"features": []}
             else:
                 raise ValueError(f"ArcGIS error: {geojson['error']}")
         elif "features" not in geojson:
@@ -468,7 +422,6 @@ class HubClient:
                 "resultRecordCount": geom_limit,
                 "returnGeometry": "false",
                 "f": "json",
-                **_token_params(base),
             }
             try:
                 resp2 = self.session.get(f"{base}/query", params=params_json, timeout=REQUEST_TIMEOUT)
@@ -548,7 +501,6 @@ class HubClient:
             "where": where,
             "returnCountOnly": "true",
             "f": "json",
-            **_token_params(base),
         }
         try:
             resp = self.session.get(f"{base}/query", params=params, timeout=REQUEST_TIMEOUT)
@@ -579,7 +531,6 @@ class HubClient:
         seen_urls: set = set()
 
         # ---- Source 1: tags:zmb on ArcGIS Online ----
-        _token_arg = {"token": _ARCGIS_TOKEN} if _ARCGIS_TOKEN else {}
         try:
             resp = self.session.get(
                 "https://www.arcgis.com/sharing/rest/search",
@@ -587,7 +538,6 @@ class HubClient:
                     "q": 'tags:zmb type:"Feature Service"',
                     "f": "json",
                     "num": 100,
-                    **_token_arg,
                 },
                 timeout=REQUEST_TIMEOUT,
             )
@@ -604,7 +554,6 @@ class HubClient:
                     "q": 'orgid:iQ1dY19aHwbSDYIF type:"Feature Service"',
                     "f": "json",
                     "num": 100,
-                    **_token_arg,
                 },
                 timeout=REQUEST_TIMEOUT,
             )

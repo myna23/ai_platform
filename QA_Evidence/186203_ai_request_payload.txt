@@ -1,0 +1,205 @@
+SAMPLE AI REQUEST PAYLOAD — exactly what is sent to WBG mAI Factory
+Story 186203 | ACN-2026-31023
+==============================================================================
+Generated: 2026-09-29 17:07   Environment: Posit Connect QA
+
+Built using the application's own prompt-construction code, with live public
+data, to show precisely what leaves the application. Nothing is added beyond
+what appears below.
+
+Records retrieved from Zambia GeoHub : 148  (cap: 200)
+Records included in the AI request   : 15  (cap: 15)
+
+------------------------------------------------------------------------------
+SYSTEM MESSAGE
+------------------------------------------------------------------------------
+You are an AI assistant for the Zambia GeoHub (zmb-geowb.hub.arcgis.com). Your job is to help users understand and explore Zambia's geospatial data.
+
+RULES:
+- Answer using the dataset names, descriptions, and sample records provided to you.
+- If sample records are provided, USE THEM to give specific, concrete answers — name actual places, districts, provinces, and values from the records.
+- GO BEYOND surface answers. Always include at least one of:
+  * A ranking (largest, smallest, highest, lowest) from the data
+  * A comparison between districts, provinces, or types
+  * A practical implication (what does this mean for planning, health, education?)
+  * A notable pattern or anomaly in the records
+- When asked to show data as a table: do NOT just list rows. Instead provide:
+  1. A 2-3 sentence analytical summary of what the table shows
+  2. Key highlights (top/bottom values, outliers, patterns)
+  3. One practical insight for planners or decision-makers
+  The raw table is shown separately by the UI — focus on the analysis.
+- The 'Type' field in the Points of Interest dataset uses these 
+
+[... 3300 more characters of grounding rules ...]
+
+------------------------------------------------------------------------------
+USER MESSAGE  (complete, unmodified)
+------------------------------------------------------------------------------
+Question: How many schools are in Lusaka?
+
+Matched datasets from the Zambia GeoHub:
+
+Dataset 1: GRID3 ZMB - Operational Schools v1.0
+  Description: Operational schools across Zambia
+  Source URL: https://zmb-geowb.hub.arcgis.com/datasets/3fb6aa51dc9a4df1a1b7f4e48df5a374
+  Fields: FID, GlobalID, Type, SubType, Name, Orig_Name, Source, Province, Prov_Code, District, Distr_Code, LAT, LONG, Data_year
+
+
+⚡ EXACT TOTAL COUNT (from live API, not a sample): There are 148 records in Lusaka in this dataset. Use this number directly when answering 'how many' questions — do not hedge or say it is a sample.
+Sample records from top dataset (148 records loaded):
+```json
+[
+  {
+    "FID": "7019",
+    "GlobalID": "35LPC349854_001",
+    "Type": "School",
+    "SubType": "School",
+    "Name": "Baobab School",
+    "Orig_Name": "baobab trust",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.5044800002",
+    "LONG": "28.2578000003",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7020",
+    "GlobalID": "35LPC339893_001",
+    "Type": "School",
+    "SubType": "Basic School",
+    "Name": "Bayuni Basic School",
+    "Orig_Name": "bayuni basic",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.46992",
+    "LONG": "28.2488700004",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7021",
+    "GlobalID": "35LPC371942_001",
+    "Type": "School",
+    "SubType": "Primary School",
+    "Name": "Chibolya Primary School",
+    "Orig_Name": "chibolya primary school",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.4248200003",
+    "LONG": "28.2785599998",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7022",
+    "GlobalID": "35LPC356949_001",
+    "Type": "School",
+    "SubType": "High School",
+    "Name": "Chinika High School",
+    "Orig_Name": "chinika high",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.4190499996",
+    "LONG": "28.2643599997",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7023",
+    "GlobalID": "35LPC356927_001",
+    "Type": "School",
+    "SubType": "Primary School",
+    "Name": "John laing Primary School",
+    "Orig_Name": "john laing primary school",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.4383999998",
+    "LONG": "28.2644199998",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7024",
+    "GlobalID": "35LPC335901_001",
+    "Type": "School",
+    "SubType": "School",
+    "Name": "Makeni ecumenical School",
+    "Orig_Name": "makeni ecumenical",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.4619399998",
+    "LONG": "28.2450699996",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7025",
+    "GlobalID": "35LPC462993_001",
+    "Type": "School",
+    "SubType": "School",
+    "Name": "Muro School",
+    "Orig_Name": "muro school",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.3788999997",
+    "LONG": "28.3627000003",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7027",
+    "GlobalID": "35LPC366946_001",
+    "Type": "School",
+    "SubType": "School",
+    "Name": "Namununga School",
+    "Orig_Name": "namununga school",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.4215800002",
+    "LONG": "28.27318",
+    "Data_year": "Prior to 2015"
+  },
+  {
+    "FID": "7028",
+    "GlobalID": "35LPC460998_001",
+    "Type": "School",
+    "SubType": "School",
+    "Name": "Nataila School",
+    "Orig_Name": "nataila",
+    "Source": "MoGE",
+    "Province": "Lusaka",
+    "Prov_Code": "105",
+    "District": "Lusaka",
+    "Distr_Code": "105006",
+    "LAT": "-15.37407",
+    "LONG": "28
+
+[... truncated for readability — 3282 further characters, all additional sample records in the same format ...]
+
+==============================================================================
+WHAT THIS DEMONSTRATES
+------------------------------------------------------------------------------
+  - The payload contains only: the user's question, dataset metadata,
+    sampled public records, pre-aggregated counts, and grounding rules.
+  - No credential, token, session identifier, or user identity is present.
+  - No personal data: records carry facility name, type and location only.
+  - Record caps are enforced — 200 retrieved, at most 15 transmitted.
+  - Totals are pre-calculated so full record sets are never sent.

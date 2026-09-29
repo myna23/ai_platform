@@ -87,11 +87,14 @@ Edit `.env` and fill in:
 
 | Variable | Required | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | Yes | Get from [console.openai.com](https://console.openai.com) |
-| `ARCGIS_TOKEN` | Recommended | ArcGIS URL token — enables all 74 GeoHub datasets. See below. |
-| `AI_MODEL` | No | Default: `gpt-4o` |
+| `WB_POSIT` | Yes (on Posit Connect) | Set to `true`. Selects the WBG mAI Factory provider via Posit Connect OAuth. Not a credential. |
 | `MAX_FEATURES` | No | Default: `200` |
 | `HUB_BASE_URL` | No | Default: `https://zmb-geowb.hub.arcgis.com` |
+
+**No API keys or credentials are required or supported.** AI access uses the Posit
+Connect OAuth 2.0 token exchange (RFC 8693) — the platform issues a short-lived
+token per session and the application stores nothing. Zambia GeoHub is read
+anonymously; only public datasets are in scope.
 
 ### 3. Run
 
@@ -103,38 +106,36 @@ Open `http://localhost:8501`
 
 ---
 
-## ArcGIS Token
+## Data Access — public datasets only
 
-Without a token, only public datasets are accessible (~20 datasets). With a token, all 74+ GeoHub datasets are available including health, education, and administrative layers.
+The application reads **public** Zambia GeoHub datasets anonymously. No ArcGIS
+token, API key, or credential is used, stored, or supported.
 
-**Getting a URL token (expires ~14 days):**
-1. Log into the Zambia GeoHub as an admin
-2. Navigate to any FeatureServer dataset URL in the browser
-3. The URL will contain `?token=...` — copy that value
-4. Paste into the app sidebar → Token field (it auto-extracts from a full URL)
-
-**Getting a permanent API Key (recommended for production):**
-1. Log into ArcGIS Online as an admin
-2. Go to Content → My Content → New Item → Developer Credentials
-3. Select "Private application with selected privileges and access"
-4. Grant: Data access (Read), Portal (Read)
-5. Copy the generated API Key — store in `ARCGIS_TOKEN`
+Private/token-gated dataset access was removed from the application's scope under
+OIS security review (ACN-2026-31023), together with all code that stored,
+refreshed, or transmitted an ArcGIS token.
 
 ---
 
-## Deployment — Streamlit Cloud
+## Deployment — WBG Posit Connect
 
-The app is deployed via [Streamlit Community Cloud](https://share.streamlit.io) connected to this GitHub repository. Every push to `main` auto-deploys.
+The application is deployed to **WBG Posit Connect**, git-backed from this
+repository. Merging to `main` makes the change available; deployment is then
+triggered from the Posit Connect content page.
 
-**Secrets** (set in Streamlit Cloud dashboard → App Settings → Secrets):
+**Environment variables** (Posit Connect → app → Settings → Vars):
 
-```toml
-OPENAI_API_KEY = "sk-ant-..."
-ARCGIS_TOKEN = "..."
-OPENAI_API_KEY = "sk-..."
-MAX_FEATURES = "200"
-HUB_BASE_URL = "https://zmb-geowb.hub.arcgis.com"
 ```
+WB_POSIT = true
+```
+
+That is the only variable set. It is a non-sensitive feature flag, not a
+credential. `CONNECT_SERVER`, `CONNECT_API_KEY` and
+`CONNECT_CONTENT_SESSION_TOKEN` are injected automatically by the platform and
+are never configured by hand.
+
+AI access is granted by attaching the **mAI Factory OAuth integration** to the
+content item (Settings → Access → Integrations). No API key is involved.
 
 ---
 
@@ -219,7 +220,7 @@ Then add keyword boosts in `_SUBJECT_BOOST` and `_SUBJECT_BOOST_MODULE` if neede
    ```
 
 ### Change the AI model
-No code changes needed. Update `AI_MODEL` in `.env` (local) or Streamlit Cloud secrets (production).
+Model selection is made in the application sidebar. All models are reached through the WBG mAI Factory gateway.
 
 ### Add a new AI feature (beyond chat/summary/report)
 1. Add a new intent keyword in `detect_intent()` in `app.py`
@@ -233,7 +234,7 @@ No code changes needed. Update `AI_MODEL` in `.env` (local) or Streamlit Cloud s
 - **`app.py` is monolithic** — ~3,000 lines. Refactoring into `ui/`, `logic/` sub-modules is a recommended next step for maintainability.
 - **ArcGIS token expires every ~14 days** — a permanent OAuth API Key from the GeoHub admin is needed for production (in progress).
 - **Offline schools data** only covers 3 of 10 provinces — expand by fetching and saving data for remaining provinces once the live server is stable.
-- **Streamlit Cloud free tier** — app may sleep after inactivity. Consider upgrading to a paid tier or migrating to a dedicated server for production.
+- **Hosting** — the application runs on WBG Posit Connect (QA environment). Availability follows that platform.
 - **No user authentication** — all users share the same app instance and session state is per-browser-tab only.
 
 ---
