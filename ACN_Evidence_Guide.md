@@ -341,14 +341,26 @@
 
 ---
 
-# 25 — 186212 · Security events logged and monitored — GAP
+# 25 — 186212 · Security events logged and monitored
 
 **Paste:**
-> Confirmed not in place at application level. The application performs no user authentication or authorisation of its own, so there are no in-application auth events to log. Platform logging — startup, access requests, runtime errors — exists and is attached. Monitoring, alerting, a triage process, and a named reviewer do not.
+> The application now emits structured, machine-parseable security and operational events:
 >
-> Given Low time-criticality, public-only data, and nothing stored, we propose scoping this proportionately alongside 186217 and 186218, and request OIS direction on the minimum expected before building.
+> ```
+> ZGIA_EVENT severity=ERROR event=ai_request_failed error_type=APIConnectionError
+> ZGIA_EVENT severity=WARN  event=geohub_fetch_failed location=Chadiza
+> ZGIA_EVENT severity=WARN  event=geohub_fallback_offline location=Rufunsa
+> ZGIA_EVENT severity=WARN  event=geohub_context_fetch_failed location=Lusaka error_type=HTTPError
+> ZGIA_EVENT severity=INFO  event=data_export format=csv dataset=GRID3_ZMB_Schools rows=328
+> ```
+>
+> Each is one `key=value` line with a severity, designed to be alerted on directly by a SIEM. They contain no prompt text, user content, service URLs, or credentials. The attached logs show them in the QA environment.
+>
+> These cover application errors, integration failures, degraded operation, and export activity. The application performs no user authentication or authorisation of its own, so there are no in-application auth events to record — access control is enforced by Posit Connect and the network perimeter (see 186168).
+>
+> **What remains:** monitoring, alerting, a triage process, and a named reviewer are not in place. These depend on whether Posit Connect platform logs reach WBG Splunk — the open question under 186218 — and on OIS confirming the expected thresholds and escalation path. Detail and proposal under 186217.
 
-**Screenshot:** F · **Snippet:** none · **File:** none
+**Screenshot:** F · **Snippet:** *186212 · 186217 — Structured event logging* · **File:** none
 
 ---
 
@@ -370,13 +382,21 @@
 # 27 — 186214 · Authentication and authorization failures logged
 
 **Paste:**
-> The application has no user login, so there are no in-application login failures. Service-to-service failures are captured: a failed OAuth token exchange or rejected mAI Factory request is caught, logged, and surfaced to the user. Sample logs attached.
+> The application has no user login, so there are no in-application login failures. Authentication to reach the application is handled by Posit Connect and the network perimeter; failure logging for those is platform-owned.
 >
-> **Gaps:** these go to the platform log only, are not forwarded to a SIEM, and raise no alert on repeated failures (see 186217, 186218). No threshold for suspicious repeated failure is defined and no review process is documented.
+> Service-to-service failures are now recorded as structured events. A failed OAuth token exchange or rejected mAI Factory request is caught and logged as:
+>
+> ```
+> ZGIA_EVENT severity=ERROR event=ai_request_failed error_type=<ExceptionType>
+> ```
+>
+> The event carries the failure type only — never the token, the service response body, or any user content. The attached logs show these in the QA environment.
+>
+> **Gaps:** these reach the platform log only, are not forwarded to a SIEM, and raise no alert on repeated failures. No threshold for suspicious repeated failure is defined and no review process is documented — both depend on the Splunk forwarding question (186218) and OIS direction on thresholds (186217).
 >
 > Platform-level authentication failure logs from Posit Connect and Azure AD are owned by those teams; requested.
 
-**Screenshot:** F · **Snippet:** none · **File:** none
+**Screenshot:** F · **Snippet:** *186212 · 186217 — Structured event logging* · **File:** none
 
 ---
 
@@ -393,14 +413,31 @@
 
 ---
 
-# 29 — 186217 · Monitoring detects service failures and abnormal activity — GAP
+# 29 — 186217 · Monitoring detects service failures and abnormal activity
 
 **Paste:**
-> Confirmed: no monitoring or alerting has been configured — no dashboards, thresholds, notification routing, reviewer ownership, or test alerts. We accept that the fallback behaviour previously described is fault tolerance, not detection, and does not satisfy this control.
+> We accept the assessment. The fallback behaviour we previously described is fault tolerance, not detection, and does not satisfy this control. No alerting, thresholds, routing, or reviewer ownership existed.
 >
-> Nothing exists to screenshot. We request OIS direction on the minimum acceptable for an application of this profile — Low time-criticality, stateless, public-data-only, nothing stored — before building, so that what we implement matches expectations.
+> **What has changed:** the application now emits structured, machine-parseable security and operational events, designed to be alerted on directly by a SIEM:
+>
+> ```
+> ZGIA_EVENT severity=ERROR event=ai_request_failed error_type=APIConnectionError
+> ZGIA_EVENT severity=WARN  event=geohub_fetch_failed location=Chadiza
+> ZGIA_EVENT severity=WARN  event=geohub_fallback_offline location=Rufunsa
+> ZGIA_EVENT severity=WARN  event=geohub_context_fetch_failed location=Lusaka error_type=HTTPError
+> ZGIA_EVENT severity=INFO  event=data_export format=csv dataset=GRID3_ZMB_Schools rows=328
+> ```
+>
+> These cover the categories raised: application errors, integration/service failures, degraded operation, and export activity. Each is a single `key=value` line with a severity, and contains no prompt text, user content, service URLs, or credentials.
+>
+> **What remains, and why it is not yet built:** detection and alerting depend on whether Posit Connect platform logs reach WBG Splunk — the open question under 186218. We do not want to build monitoring that misses your expectations, so we propose:
+>
+> - **If Splunk forwarding is in place:** saved searches alerting on `event=ai_request_failed` and `event=geohub_fetch_failed` above an agreed threshold, plus `event=data_export` volume, routed to the named application owner, with a test alert provided as evidence.
+> - **If forwarding is not in place:** we ask OIS to confirm the expected alternative for an application of this profile — Low time-criticality, stateless, PUBLIC-data-only, nothing stored.
+>
+> **Two decisions we need from OIS to complete this:** the alert thresholds, and the named reviewer/escalation path. Both are operational rather than technical. On receipt we will configure the alerts and provide a test alert as evidence.
 
-**Screenshot:** none · **Snippet:** none · **File:** none — **awaiting OIS direction**
+**Screenshot:** F · **Snippet:** *186212 · 186217 — Structured event logging* · **File:** none
 
 ---
 

@@ -938,15 +938,18 @@ def _render_data_tables(sample_features: list, ds_name: str, key_prefix: str = "
     with st.expander(f"Data table — {ds_name} ({len(rows)} records)", expanded=True):
         st.dataframe(df, use_container_width=True, height=260)
 
-        # CSV download
-        st.download_button(
+        # CSV download — export activity is logged (ACN-2026-31023, stories
+        # 186212 / 186217). Dataset name and row count only; no record content.
+        if st.download_button(
             "⬇️ Download CSV",
             df.to_csv(index=False).encode("utf-8"),
             file_name=f"{ds_name.replace(' ', '_')}_data.csv",
             mime="text/csv",
             key=f"{key_prefix}_csv",
             use_container_width=False,
-        )
+        ):
+            _log_event("data_export", "INFO", format="csv",
+                       dataset=ds_name.replace(" ", "_"), rows=len(rows))
 
         # Auto summary stats for numeric columns
         num_cols = df.select_dtypes(include="number").columns.tolist()
@@ -2086,6 +2089,20 @@ _ZAMBIA_PROVINCES = {
 }
 
 
+def _log_event(event: str, severity: str = "INFO", **fields):
+    """
+    Structured security/operational event log (ACN-2026-31023, stories 186212,
+    186214, 186217).
+
+    One line per event, machine-parseable as key=value so a SIEM can alert on
+    it directly. Never records prompt text, AI responses, uploaded content,
+    credentials, service URLs, or query parameters — only the event type and
+    non-sensitive context.
+    """
+    parts = " ".join(f"{k}={v}" for k, v in fields.items() if v not in (None, ""))
+    print(f"ZGIA_EVENT severity={severity} event={event} {parts}".rstrip(), flush=True)
+
+
 def _build_place_allowlist():
     """
     Closed set of valid Zambian district and province names, loaded from the
@@ -2980,7 +2997,8 @@ def process_question(question: str):
                 map_geojson = {"type": "FeatureCollection", "features": live_feats[:200]}
             except Exception as _ctx_e:
                 # Detail logged server-side only (ACN-2026-31023, stories 186199/186216)
-                print(f"GEOHUB CONTEXT FETCH ERROR [{_location}]: {_ctx_e}", flush=True)
+                _log_event("geohub_context_fetch_failed", "WARN",
+                           location=_location, error_type=type(_ctx_e).__name__)
                 st.warning(f"⚠️ Could not load data for {_location or 'this dataset'}. "
                            f"The live GeoHub server may be temporarily unavailable.")
     else:
@@ -3521,12 +3539,9 @@ def process_question(question: str):
                 # (stories 186199 / 186216) — no prompt text, no user content,
                 # no credential is ever written here.
                 if _live_error:
-                    print(f"DATA ACCESS: live fetch FAILED  location={_location}  "
-                          f"detail={_live_error}", flush=True)
+                    _log_event("geohub_fetch_failed", "WARN", location=_location)
                 else:
-                    print(f"DATA ACCESS: live fetch returned no records  "
-                          f"location={_location}  falling back to offline dataset",
-                          flush=True)
+                    _log_event("geohub_fallback_offline", "WARN", location=_location)
                 st.warning(
                     f"⚠️ Could not load live data for **{_location}**. "
                     f"The live GeoHub server may be temporarily unavailable — "
@@ -4163,7 +4178,7 @@ def process_question(question: str):
                 _err_str = str(e)
                 # Server-side only: log the exception type and message, never a
                 # service response body or token (ACN-2026-31023, story 186216).
-                print(f"AI ERROR [{type(e).__name__}]: {_err_str}", flush=True)
+                _log_event("ai_request_failed", "ERROR", error_type=type(e).__name__)
                 if not response:
                     if "overloaded" in _err_str.lower():
                         response = "⚠️ The AI is temporarily overloaded. Please try again in a few seconds."
