@@ -1,0 +1,66 @@
+PRIVATE DATA REMOVAL — QA ENVIRONMENT VERIFICATION
+Stories 186182 | 186188 | 186211 | ACN-2026-31023
+===========================================================================
+Application:  Zambia Geospatial Intelligence Assistant
+Environment:  WBG Posit Connect QA (datanalytics-int.worldbank.org)
+Content GUID: 9232cadb-b455-4a05-9af9-08648ce85d66   Content ID: 1702
+Deployed commit: 26a6176  (2026-09-29)
+Verified on:  2026-09-30 18:41
+
+1. NO ARCGIS CREDENTIAL EXISTS IN THE DEPLOYED CODE
+---------------------------------------------------------------------------
+   ARCGIS_TOKEN / _token_params / set_token / get_token  ->  0 matches
+   credential passed as a URL query parameter            ->  0 matches
+   RESULT: PASS — no credential is read, stored, or transmitted.
+
+2. NO CREDENTIAL IS CONFIGURED IN THE QA ENVIRONMENT
+---------------------------------------------------------------------------
+   Posit Connect environment variables for this content item:
+       WB_POSIT = true      (non-sensitive feature flag)
+   No ARCGIS_TOKEN. No AI provider key. See attached Vars screenshot.
+   Platform-injected at runtime, never configured by hand:
+       CONNECT_SERVER, CONNECT_API_KEY, CONNECT_CONTENT_SESSION_TOKEN
+
+3. PREVIOUSLY TOKEN-GATED LAYERS REFUSE ANONYMOUS REQUESTS
+---------------------------------------------------------------------------
+   Live test — request each layer with no credential attached:
+
+   Token-required layer (ZMB_Form_1_view)
+       HTTP 200 -> REFUSED: ArcGIS error 499 — Token Required
+
+   Public layer, for contrast (GRID3 Schools)
+       HTTP 200 -> returned 1 record(s): layer is public
+
+   The refusal on the first layer confirms the application cannot retrieve
+   non-public data: it sends no credential, so the service declines.
+   The second layer returning data confirms public access still works.
+
+4. EVERY OUTBOUND HOST IN THE DEPLOYED CODE
+---------------------------------------------------------------------------
+        ai.worldbank.org
+        azapimdev.worldbank.org
+        services.arcgis.com
+        services3.arcgis.com
+        services6.arcgis.com
+        services7.arcgis.com
+        services9.arcgis.com
+        utility.arcgis.com
+        www.arcgis.com
+        zmb-geowb.hub.arcgis.com
+
+   All are ArcGIS (public Zambia GeoHub) or worldbank.org.
+
+5. SCOPE CONFIRMED IN THE UPDATED ARCHITECTURE DOCUMENT
+---------------------------------------------------------------------------
+   ACN_Zambia_GeoHub_AI.docx, regenerated 2026-09-29:
+   "The application processes only Public (open zmb-tagged GeoHub datasets).
+    No Confidential, Restricted, or Internal Use Only data is processed."
+
+===========================================================================
+CONCLUSION
+---------------------------------------------------------------------------
+Private/token-gated dataset access is removed at three independent levels:
+  - Code:        no credential handling exists to disable or re-enable
+  - Environment: no credential is configured in QA
+  - Service:     token-required layers refuse anonymous requests
+Retrieving non-public data is not possible, not merely switched off.
