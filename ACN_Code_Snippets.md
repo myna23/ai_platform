@@ -704,6 +704,67 @@ resp = _req.post(url, json=payload, headers={
 ---
 ---
 
+# 186212 · 186217 — Structured event logging
+
+**The event emitter.** `app.py`:
+
+```python
+def _log_event(event: str, severity: str = "INFO", **fields):
+    """
+    Structured security/operational event log (ACN-2026-31023, stories 186212,
+    186214, 186217).
+
+    One line per event, machine-parseable as key=value so a SIEM can alert on
+    it directly. Never records prompt text, AI responses, uploaded content,
+    credentials, service URLs, or query parameters — only the event type and
+    non-sensitive context.
+    """
+    parts = " ".join(f"{k}={v}" for k, v in fields.items() if v not in (None, ""))
+    print(f"ZGIA_EVENT severity={severity} event={event} {parts}".rstrip(), flush=True)
+```
+
+**Where events are emitted:**
+
+```python
+# AI request failure
+_log_event("ai_request_failed", "ERROR", error_type=type(e).__name__)
+
+# Live geospatial fetch failed
+_log_event("geohub_fetch_failed", "WARN", location=_location)
+
+# Live fetch returned nothing; fell back to the offline dataset
+_log_event("geohub_fallback_offline", "WARN", location=_location)
+
+# Supplementary context fetch failed
+_log_event("geohub_context_fetch_failed", "WARN",
+           location=_location, error_type=type(_ctx_e).__name__)
+
+# Export / download activity
+_log_event("data_export", "INFO", format="csv",
+           dataset=ds_name.replace(" ", "_"), rows=len(rows))
+```
+
+**Sample output a SIEM would receive:**
+
+```
+ZGIA_EVENT severity=ERROR event=ai_request_failed error_type=APIConnectionError
+ZGIA_EVENT severity=WARN  event=geohub_fetch_failed location=Chadiza
+ZGIA_EVENT severity=WARN  event=geohub_fallback_offline location=Rufunsa
+ZGIA_EVENT severity=WARN  event=geohub_context_fetch_failed location=Lusaka error_type=HTTPError
+ZGIA_EVENT severity=INFO  event=data_export format=csv dataset=GRID3_ZMB_Schools rows=328
+```
+
+**Verification that no user content is logged:**
+
+```
+$ grep -rnE "print\(.*(question|user_p|response|_doc_text|uploaded|token)" \
+      --include="*.py" app.py ai/ hub/
+(no matches — no prompt, response, or credential is written to the log)
+```
+
+---
+---
+
 # 186216 — Logs do not contain secrets
 
 **1. OAuth failures no longer log the response body.** `ai/model_client.py`:
@@ -736,6 +797,8 @@ if _live_error:
 # service response body or token (ACN-2026-31023, story 186216).
 print(f"AI ERROR [{type(e).__name__}]: {_err_str}", flush=True)
 ```
+
+**Operational events are logged in a structured, non-sensitive form** — see the *186212 · 186217* section for the emitter and sample output.
 
 **No prompts, responses, or uploaded content are logged** — they exist only in session memory:
 
