@@ -3514,11 +3514,19 @@ def process_question(question: str):
                     datasets = [_live_candidate or _static_candidate] + [
                         d for d in datasets if d not in (_live_candidate, _static_candidate)
                     ]
-                # Technical detail (service URLs, query parameters, org identifiers)
-                # is logged server-side only and never shown to the user
-                # (ACN-2026-31023, stories 186199 / 186216).
+                # Data-access event log (ACN-2026-31023, stories 186212 / 186214).
+                # Records that a live retrieval did not return data and the
+                # application fell back to offline data. Technical detail is
+                # logged server-side only and never shown to the user
+                # (stories 186199 / 186216) — no prompt text, no user content,
+                # no credential is ever written here.
                 if _live_error:
-                    print(f"GEOHUB FETCH ERROR [{_location}]: {_live_error}", flush=True)
+                    print(f"DATA ACCESS: live fetch FAILED  location={_location}  "
+                          f"detail={_live_error}", flush=True)
+                else:
+                    print(f"DATA ACCESS: live fetch returned no records  "
+                          f"location={_location}  falling back to offline dataset",
+                          flush=True)
                 st.warning(
                     f"⚠️ Could not load live data for **{_location}**. "
                     f"The live GeoHub server may be temporarily unavailable — "
