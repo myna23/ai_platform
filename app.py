@@ -2103,6 +2103,11 @@ def _log_event(event: str, severity: str = "INFO", **fields):
     print(f"ZGIA_EVENT severity={severity} event={event} {parts}".rstrip(), flush=True)
 
 
+# Application start is itself a security-relevant event (ACN-2026-31023,
+# story 186212) and confirms event logging is active in the environment.
+_log_event("app_started", "INFO", app="ZGIA")
+
+
 def _build_place_allowlist():
     """
     Closed set of valid Zambian district and province names, loaded from the
@@ -3200,6 +3205,8 @@ def process_question(question: str):
                         if live_feats and "error" not in _gjson:
                             geojson = _gjson
                             st.session_state["_last_fetch_was_live"] = True
+                            _log_event("geohub_fetch_ok", "INFO",
+                                       location=_location, records=len(live_feats))
                             # Spatially assign district/province to features that lack them
                             if _CONTEXT_LAYERS:
                                 assign_districts(live_feats, _CONTEXT_LAYERS[0]["geojson"])
@@ -3524,6 +3531,8 @@ def process_question(question: str):
                     if _static_candidate:
                         datasets = [_static_candidate] + [d for d in datasets if d != _static_candidate]
                     st.session_state["_last_fetch_was_live"] = False
+                    _log_event("geohub_fallback_offline", "WARN",
+                               location=_location, records=len(loc_feats), path="location_static")
                     st.info(f"📦 Showing {len(loc_feats)} pre-loaded records for {_location} (live server unavailable).")
 
             # 3. Location not found anywhere
@@ -3565,6 +3574,8 @@ def process_question(question: str):
                         if _static_candidate:
                             datasets = [_static_candidate] + [d for d in datasets if d != _static_candidate]
                         st.session_state["_last_fetch_was_live"] = False
+                        _log_event("geohub_fallback_offline", "WARN",
+                                   location=_location, records=len(_all_feats), path="countrywide_static")
                         # Prepend a note so the AI knows to look for the location in this data
                         sample_features = [{"_note": (
                             f"Live data is temporarily unavailable. The records below are the "
@@ -3632,6 +3643,8 @@ def process_question(question: str):
         # Last resort: static fallback
         if not sample_features:
             st.session_state["_last_fetch_was_live"] = False
+            _log_event("geohub_fallback_offline", "WARN",
+                       location=_location or "none", path="last_resort_static")
             _static_data, _static_candidate = _find_static(question.lower())
             if _static_data and _static_data.get("features"):
                 _static_feats = _static_data["features"]
