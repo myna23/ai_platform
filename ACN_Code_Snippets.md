@@ -118,6 +118,136 @@ st.chat_input(..., accept_file="multiple",
 ---
 ---
 
+# 186189 — Required confirmation before an attachment is processed
+
+**The control.** An attached file is held **unprocessed** until the user actively
+confirms its classification. Nothing is parsed, stored in session state, or sent
+to the WBG mAI Factory before that confirmation. `app.py`:
+
+```python
+# ── Required confirmation gate for attachments ───────────────────────────────
+# ACN-2026-31023, story 186189. An attached file is held UNPROCESSED until the
+# user actively confirms its data classification. Nothing is parsed, stored in
+# session state, or sent to the WBG mAI Factory before that confirmation.
+if st.session_state.get("_pending_files"):
+    _pf = st.session_state["_pending_files"]
+    _names = ", ".join(f["name"] for f in _pf)
+    st.error(f"🔒 **Confirmation required before this file is processed — {_names}**")
+    st.markdown(
+        "This application is approved for **PUBLIC data only**. If you continue, the "
+        "content of this file will be sent to the WBG mAI Factory for analysis. "
+        "It will not be read, stored, or transmitted unless you confirm below."
+    )
+    _ok = st.checkbox(
+        "I confirm this file contains no personal data (PII), and no Confidential, "
+        "Restricted, or Internal Use Only material.",
+        key="_upload_confirm_box",
+    )
+    _cc1, _cc2 = st.columns(2)
+    if _cc1.button("Confirm and process", disabled=not _ok,
+                   type="primary", use_container_width=True):
+        for _f in _pf:
+            _process_confirmed_upload(_f["name"], _f["bytes"])
+        _log_event("upload_confirmed", "INFO", files=len(_pf))
+        ...
+    if _cc2.button("Cancel and discard", use_container_width=True):
+        _log_event("upload_cancelled", "INFO", files=len(_pf))
+        ...
+    st.stop()   # nothing below runs until the user confirms or cancels
+```
+
+**On submit, the file is only held — never parsed:**
+
+```python
+if _chat_result:
+    # Attachments are held pending explicit confirmation — not parsed here.
+    if _chat_result.files:
+        _pending = []
+        for _af in _chat_result.files:
+            _pending.append({"name": _af.name, "bytes": _af.read()})
+        if _pending:
+            st.session_state["_pending_files"] = _pending
+            st.session_state["_upload_pending_question"] = _chat_result.text or ""
+            _log_event("upload_awaiting_confirmation", "INFO", files=len(_pending))
+            st.rerun()
+```
+
+**Three properties that make this a control rather than a notice:**
+
+1. The `Confirm and process` button is `disabled=not _ok` — it cannot be pressed until the checkbox is ticked.
+2. `st.stop()` halts the script, so no downstream code runs while a file is pending.
+3. Parsing happens only inside `_process_confirmed_upload()`, which is reachable only from the confirm branch.
+
+**Audit trail** — each outcome is logged:
+
+```
+ZGIA_EVENT severity=INFO event=upload_awaiting_confirmation files=1
+ZGIA_EVENT severity=INFO event=upload_confirmed files=1
+ZGIA_EVENT severity=INFO event=upload_cancelled files=1
+```
+
+---
+---
+
+# 186198 (follow-up) — Prompt handling and report input validation
+
+**Report inputs are not user-controlled.** The report generator receives only the
+selected dataset's metadata and the records retrieved from the Zambia GeoHub —
+the user's free text is never passed into it. `app.py`:
+
+```python
+rpt_text = ai_client.ask(
+    system=report_system_prompt(),
+    user=report_prompt(
+        ds["name"],            # dataset name, from the catalogue
+        ds["description"],     # dataset description, from the catalogue
+        ds.get("fields", []),  # field names, from the dataset schema
+        stats,                 # computed aggregate counts
+        sample_features,       # records retrieved from ArcGIS
+    ),
+    max_tokens=3000,
+)
+```
+
+`ai/prompts.py`:
+
+```python
+def report_prompt(
+    dataset_name: str,
+    description: str,
+    fields: list[dict],
+    stats: dict,
+    sample_features: list[dict],
+) -> str:
+```
+
+No user-supplied string reaches the report prompt.
+
+**Prompt handling safeguards for the chat path.** The user's question is passed to
+the model, but three constraints bound what it can influence:
+
+1. **It cannot reach a data query.** Only an allowlisted place name and a matched
+   topic keyword are used for retrieval — see the *186198* section above.
+2. **The system prompt constrains the answer to retrieved records:**
+
+```
+- Answer using the dataset names, descriptions, and sample records provided to you.
+- Never invent statistics or dataset names. If a tool returns an error, say so.
+- Cite the dataset name in your final answer.
+```
+
+3. **The payload is capped** — 200 records retrieved, at most 15 transmitted, with
+   totals pre-aggregated so full record sets are never sent.
+
+**Disclosed limitation:** there is no dedicated prompt-injection filter. A user's
+question is sent to the model as written. The mitigations above bound the
+*consequences* — a crafted prompt cannot alter the dataset query, reach non-public
+data, or cause a credential to be disclosed, because none is held. We would welcome
+OIS direction on an expected prompt-injection testing standard.
+
+---
+---
+
 # 186191 — Data limited to the minimum required
 
 **Retrieval cap — 200 records.** `app.py`:

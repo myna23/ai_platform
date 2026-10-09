@@ -4469,40 +4469,86 @@ st.caption(
     "for analysis. Do not attach personal data, or Confidential, Restricted, or "
     "Internal Use Only material. This application is approved for PUBLIC data only."
 )
-if _chat_result:
-    if _chat_result.files:
-        st.warning(
-            "🔒 You attached a file. Its content will be sent to the WBG mAI Factory "
-            "for analysis. Confirm it contains no personal data and no Confidential, "
-            "Restricted, or Internal Use Only material — this application is approved "
-            "for PUBLIC data only."
-        )
-    for _af in (_chat_result.files or []):
-        _af_name = _af.name.lower()
-        if _af_name.endswith((".png", ".jpg", ".jpeg", ".webp")):
-            import base64 as _b64
-            _img_bytes = _af.read()
-            _img_mime = "image/png" if _af_name.endswith(".png") else "image/jpeg"
-            st.session_state["uploaded_img_b64"]  = _b64.b64encode(_img_bytes).decode()
-            st.session_state["uploaded_img_mime"] = _img_mime
-            st.session_state["uploaded_img_name"] = _af.name
+def _process_confirmed_upload(name: str, raw: bytes):
+    """Parse a confirmed attachment into session state. Only ever reached after
+    the user has actively confirmed the content classification (story 186189)."""
+    import io as _io2
+    lower = name.lower()
+    if lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
+        import base64 as _b64
+        st.session_state["uploaded_img_b64"]  = _b64.b64encode(raw).decode()
+        st.session_state["uploaded_img_mime"] = "image/png" if lower.endswith(".png") else "image/jpeg"
+        st.session_state["uploaded_img_name"] = name
+        return
+    try:
+        if lower.endswith(".pdf"):
+            import pypdf as _pypdf
+            _reader = _pypdf.PdfReader(_io2.BytesIO(raw))
+            _doc_text = "\n".join(p.extract_text() or "" for p in _reader.pages)
+        elif lower.endswith(".docx"):
+            import docx as _docx
+            _doc_obj = _docx.Document(_io2.BytesIO(raw))
+            _doc_text = "\n".join(p.text for p in _doc_obj.paragraphs if p.text.strip())
         else:
+            _doc_text = raw.decode("utf-8", errors="ignore")
+        if _doc_text.strip():
+            st.session_state["uploaded_doc_text"] = _doc_text.strip()
+            st.session_state["uploaded_doc_name"] = name
+    except Exception:
+        _log_event("upload_parse_failed", "WARN", file_type=lower.rsplit(".", 1)[-1])
+
+
+# ── Required confirmation gate for attachments ───────────────────────────────
+# ACN-2026-31023, story 186189. An attached file is held UNPROCESSED until the
+# user actively confirms its data classification. Nothing is parsed, stored in
+# session state, or sent to the WBG mAI Factory before that confirmation.
+if st.session_state.get("_pending_files"):
+    _pf = st.session_state["_pending_files"]
+    _names = ", ".join(f["name"] for f in _pf)
+    st.error(f"🔒 **Confirmation required before this file is processed — {_names}**")
+    st.markdown(
+        "This application is approved for **PUBLIC data only**. If you continue, the "
+        "content of this file will be sent to the WBG mAI Factory for analysis. "
+        "It will not be read, stored, or transmitted unless you confirm below."
+    )
+    _ok = st.checkbox(
+        "I confirm this file contains no personal data (PII), and no Confidential, "
+        "Restricted, or Internal Use Only material.",
+        key="_upload_confirm_box",
+    )
+    _cc1, _cc2 = st.columns(2)
+    if _cc1.button("Confirm and process", disabled=not _ok,
+                   type="primary", use_container_width=True):
+        for _f in _pf:
+            _process_confirmed_upload(_f["name"], _f["bytes"])
+        _log_event("upload_confirmed", "INFO", files=len(_pf))
+        _held_q = st.session_state.get("_upload_pending_question") or ""
+        st.session_state["_pending_files"] = None
+        st.session_state["_upload_pending_question"] = None
+        if _held_q.strip():
+            st.session_state._pending_question = _held_q
+        st.rerun()
+    if _cc2.button("Cancel and discard", use_container_width=True):
+        _log_event("upload_cancelled", "INFO", files=len(_pf))
+        st.session_state["_pending_files"] = None
+        st.session_state["_upload_pending_question"] = None
+        st.rerun()
+    st.stop()   # nothing below runs until the user confirms or cancels
+
+if _chat_result:
+    # Attachments are held pending explicit confirmation — not parsed here.
+    if _chat_result.files:
+        _pending = []
+        for _af in _chat_result.files:
             try:
-                if _af_name.endswith(".pdf"):
-                    import pypdf as _pypdf
-                    _reader = _pypdf.PdfReader(_af)
-                    _doc_text = "\n".join(p.extract_text() or "" for p in _reader.pages)
-                elif _af_name.endswith(".docx"):
-                    import docx as _docx
-                    _doc_obj = _docx.Document(_af)
-                    _doc_text = "\n".join(p.text for p in _doc_obj.paragraphs if p.text.strip())
-                else:
-                    _doc_text = _af.read().decode("utf-8", errors="ignore")
-                if _doc_text.strip():
-                    st.session_state["uploaded_doc_text"] = _doc_text.strip()
-                    st.session_state["uploaded_doc_name"] = _af.name
+                _pending.append({"name": _af.name, "bytes": _af.read()})
             except Exception:
                 pass
+        if _pending:
+            st.session_state["_pending_files"] = _pending
+            st.session_state["_upload_pending_question"] = _chat_result.text or ""
+            _log_event("upload_awaiting_confirmation", "INFO", files=len(_pending))
+            st.rerun()
     question = _chat_result.text or ""
     if question.strip() or st.session_state.get("uploaded_img_b64") or st.session_state.get("uploaded_doc_text"):
         if st.session_state.edit_idx is None:
