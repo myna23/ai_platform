@@ -18,4 +18,4 @@ pandas==3.0.6
 pypdf==6.19.0
 matplotlib==3.11.2
 azure-identity==1.25.3
-truststore>=0.9.1
+truststore==0.10.4
