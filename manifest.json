@@ -18,7 +18,7 @@
       "checksum": "8f4e3db3a5377558da32c1cbcdc723ac"
     },
     ".gitignore": {
-      "checksum": "06767ec57a1e26e29deb6c5dd8b4e104"
+      "checksum": "c585e912ea0dbc84bb961d8b1b01d89e"
     },
     "ACN_Architecture_Diagrams.html": {
       "checksum": "7d6732e8c1c4a3273a1be0b6c920b968"
@@ -168,7 +168,7 @@
       "checksum": "fe83207507f076c7a71a8e86a8a9d11d"
     },
     "requirements.txt": {
-      "checksum": "9553fcc2862750a9a11c096a68615f0b"
+      "checksum": "d507851453f76ade7c58866d1b8cc5be"
     },
     "utils/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
