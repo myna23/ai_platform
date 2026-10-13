@@ -145,6 +145,49 @@ def fetch_available_models(provider: str, api_key: str) -> list:
     return fallback
 
 
+def _to_openai_content(messages: list) -> list:
+    """
+    Translate Anthropic-style content blocks into the OpenAI chat-completions
+    schema.
+
+    Attached images are built once, in Anthropic's shape, because the Bedrock
+    Claude path consumes that shape directly:
+
+        {"type": "image", "source": {"type": "base64",
+                                     "media_type": "image/png", "data": "..."}}
+
+    The OpenAI-compatible endpoints (mAI Factory, GPT-5) instead expect:
+
+        {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
+
+    Without this translation the image block is not understood, the model has
+    nothing to look at, and it returns an empty answer — which the caller then
+    renders as a report with no content.
+
+    Text blocks and plain-string messages pass through unchanged.
+    """
+    converted = []
+    for msg in messages:
+        content = msg.get("content")
+        if not isinstance(content, list):
+            converted.append(msg)
+            continue
+        blocks = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "image":
+                source = block.get("source") or {}
+                mime = source.get("media_type") or "image/jpeg"
+                data = source.get("data") or ""
+                blocks.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{data}"},
+                })
+            else:
+                blocks.append(block)
+        converted.append({**msg, "content": blocks})
+    return converted
+
+
 class ModelClient:
     """
     Provider-agnostic AI client.  Instantiate with a provider name, model name,
@@ -332,7 +375,7 @@ class ModelClient:
 
     def _azure_openai_stream_history(self, system, messages, max_tokens):
         client = self._azure_openai_client()
-        full_messages = [{"role": "system", "content": system}] + messages
+        full_messages = [{"role": "system", "content": system}] + _to_openai_content(messages)
         kwargs = dict(model=self.model, messages=full_messages)
         if self.model in ("gpt-5", "gpt-5-mini"):
             kwargs["max_completion_tokens"] = max_tokens
@@ -439,7 +482,7 @@ class ModelClient:
     def _openai_stream_history(self, system, messages, max_tokens):
         client = self._openai_client()
         # Prepend system message
-        full_messages = [{"role": "system", "content": system}] + messages
+        full_messages = [{"role": "system", "content": system}] + _to_openai_content(messages)
         stream = client.chat.completions.create(
             model=self.model, max_tokens=max_tokens, stream=True,
             messages=full_messages,
