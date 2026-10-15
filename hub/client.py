@@ -399,7 +399,11 @@ class HubClient:
             resp.raise_for_status()
             geojson = resp.json()
         except requests.RequestException as exc:
-            raise RuntimeError(f"Feature fetch failed: {exc}") from exc
+            # Only the exception type is reported. The exception text can carry
+            # the full service URL and response body (ACN-2026-31023, story 186199).
+            raise RuntimeError(
+                f"Feature fetch failed ({type(exc).__name__})."
+            ) from None
 
         if "error" in geojson:
             err = geojson["error"]
@@ -408,10 +412,11 @@ class HubClient:
                 # fall through to static data rather than attempting authentication.
                 geojson = {"features": []}
             else:
-                raise ValueError(f"ArcGIS error: {geojson['error']}")
+                # Status code only — the service error body is not propagated.
+                raise ValueError(f"Data service returned an error (code {err.get('code')}).")
         elif "features" not in geojson:
-            snippet = str(geojson)[:300]
-            raise ValueError(f"Response is not GeoJSON — keys={list(geojson.keys())} snippet={snippet}")
+            # The response body is deliberately not included.
+            raise ValueError("Data service returned an unexpected response format.")
 
         # If GeoJSON came back empty, retry without geometry (attributes only via JSON).
         # Some ArcGIS servers refuse GeoJSON format from cloud IPs but serve plain JSON.
@@ -507,10 +512,14 @@ class HubClient:
             resp.raise_for_status()
             data = resp.json()
             if "error" in data:
-                raise RuntimeError(f"ArcGIS error: {data['error']}")
+                # Status code only — the service error body is not propagated
+                # (ACN-2026-31023, story 186199).
+                raise RuntimeError(
+                    f"Data service returned an error (code {data['error'].get('code')})."
+                )
             return int(data.get("count", 0))
         except Exception as exc:
-            raise RuntimeError(f"count_features failed: {exc}") from exc
+            raise RuntimeError(f"Count query failed ({type(exc).__name__}).") from None
 
     # ------------------------------------------------------------------
     # Catalog loading

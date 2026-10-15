@@ -3155,7 +3155,7 @@ def process_question(question: str):
                                 _gjson = _resp.json()
                                 if "error" in _gjson:
                                     _err = _gjson["error"]
-                                    raise RuntimeError(f"API error {_err.get('code')}: {_err.get('message')}")
+                                    raise RuntimeError(f"Data service returned an error (code {_err.get('code')}).")
                                 live_feats = _gjson.get("features", [])
                         else:
                             # Standard district/province field filter
@@ -3199,7 +3199,7 @@ def process_question(question: str):
                             _gjson = _resp.json()
                             if "error" in _gjson:
                                 _err = _gjson["error"]
-                                raise RuntimeError(f"API error {_err.get('code')}: {_err.get('message')}")
+                                raise RuntimeError(f"Data service returned an error (code {_err.get('code')}).")
                             live_feats = _gjson.get("features", [])
 
                         if live_feats and "error" not in _gjson:
@@ -3629,7 +3629,7 @@ def process_question(question: str):
                             geojson = _draw_resp.json()
                             if "error" in geojson:
                                 _err = geojson["error"]
-                                raise RuntimeError(f"API error {_err.get('code')}: {_err.get('message')}")
+                                raise RuntimeError(f"Data service returned an error (code {_err.get('code')}).")
                         else:
                             geojson = hub.fetch_geojson(candidate["url"], query_hint=question)
                         sample_features = geojson_to_sample_rows(geojson, n=200)
@@ -3638,7 +3638,7 @@ def process_question(question: str):
                             datasets = [candidate] + [d for d in datasets if d != candidate]
                             break
                     except Exception as e:
-                        _fetch_errors.append(f"{candidate['name']}: {e}")
+                        _fetch_errors.append(f"{candidate['name']}: {type(e).__name__}")
 
         # Last resort: static fallback
         if not sample_features:
