@@ -22,6 +22,7 @@ TESTS=(
 "186198|186198_input_validation.txt|Input validation - closed place-name allowlist|test_input_validation.py"
 "186199|186199_error_handling.txt|Error handling - no technical detail disclosed to users|test_error_handling.py"
 "186189|186189_no_arcgis_credential.txt|No ArcGIS credential configured or used|test_no_arcgis_credential.py"
+"186189|186189_no_file_uploads.txt|File uploads are not available|test_no_file_uploads.py"
 )
 
 failed=()

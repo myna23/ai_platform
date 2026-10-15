@@ -45,10 +45,10 @@
       "checksum": "fedc831e3c7d72838c39cbff6e03b088"
     },
     "ai/prompts.py": {
-      "checksum": "50657519a012d6e708528e7f07bf0720"
+      "checksum": "c0637177ed873b0b910e975861f04722"
     },
     "app.py": {
-      "checksum": "3b70476e331b6801985ad1123e4188c9"
+      "checksum": "d3374bc03f7633add5d3cd34bbd36917"
     },
     "backend_architecture.html": {
       "checksum": "76d1adec670907917b87fe012c65b356"
@@ -168,7 +168,7 @@
       "checksum": "fe83207507f076c7a71a8e86a8a9d11d"
     },
     "requirements.txt": {
-      "checksum": "4c0c7ff0e1c89b64207e88c700fcfa66"
+      "checksum": "e747b7b55ed3f56096cb92e47f8d94f7"
     },
     "utils/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
