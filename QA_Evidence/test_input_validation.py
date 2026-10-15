@@ -65,17 +65,28 @@ def load_control_under_test():
     return ns, segments
 
 
-# (input, expected outcome, what the case demonstrates)
+# The eight cases previously reported for this story, re-run against the
+# current code. (input, expected outcome, what the case demonstrates)
 CASES = [
-    ("Lusaka",                        "ACCEPT", "Valid district"),
-    ("Copperbelt",                    "ACCEPT", "Valid province"),
-    ("Chongwe",                       "ACCEPT", "Valid district"),
-    ("Lusaka' OR '1'='1",             "REJECT", "SQL / WHERE-clause injection"),
-    ("Lusaka; DROP TABLE facilities--", "REJECT", "Statement injection"),
-    ("<script>alert(1)</script>",     "REJECT", "Script payload"),
-    ("../../etc/passwd",              "REJECT", "Path traversal"),
-    ("Nairobi",                       "REJECT", "Real place outside the dataset"),
+    ("Lusaka",                           "ACCEPT", "Valid district and province"),
+    ("Chadiza",                          "ACCEPT", "Valid district"),
+    ("Rufunsa",                          "ACCEPT", "Valid district"),
+    ("Nairobi",                          "REJECT", "Not a Zambian place"),
+    ("Atlantis",                         "REJECT", "Not a Zambian place"),
+    ("' OR 1=1--",                       "REJECT", "Injection attempt"),
+    ("Robert'); DROP TABLE schools;--",  "REJECT", "Injection attempt"),
+    ("<script>alert(1)</script>",        "REJECT", "Script payload"),
 ]
+
+
+def call_sites():
+    """Locate every place the allowlist check is applied, in the live source."""
+    found = []
+    for i, line in enumerate(open(APP, encoding="utf-8"), 1):
+        stripped = line.strip()
+        if "_is_valid_place(" in stripped and not stripped.startswith("def "):
+            found.append((i, stripped))
+    return found
 
 
 def main():
@@ -96,6 +107,12 @@ def main():
     print("CONTROL AS IT APPEARS IN app.py")
     print("-" * 78)
     print(segments["_is_valid_place"])
+    print("-" * 78)
+    print()
+    print("ENFORCEMENT POINTS - every call site, located in the current source")
+    print("-" * 78)
+    for lineno, line in call_sites():
+        print(f"  app.py:{lineno}: {line}")
     print("-" * 78)
     print()
     print("TEST RESULTS")
