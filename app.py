@@ -2103,6 +2103,23 @@ def _log_event(event: str, severity: str = "INFO", **fields):
     print(f"ZGIA_EVENT severity={severity} event={event} {parts}".rstrip(), flush=True)
 
 
+def _ai_review_notice():
+    """
+    Human-review notice shown beneath every AI-generated answer
+    (ACN-2026-31023, story 186204).
+
+    The control requires that users are instructed to review AI output before
+    relying on it. This is rendered on the shared answer path, so it appears
+    with every response — new answers, replayed history, reports and
+    summaries alike.
+    """
+    st.caption(
+        "🔎 **AI-generated — review before use.** Check the figures above against "
+        "the source datasets listed below before using them in any decision, "
+        "report or published document."
+    )
+
+
 # Application start is itself a security-relevant event (ACN-2026-31023,
 # story 186212) and confirms event logging is active in the environment.
 _log_event("app_started", "INFO", app="ZGIA")
@@ -2696,6 +2713,7 @@ for i, msg in enumerate(st.session_state.messages):
                 _render_overview_card(_ao["location"], _ao["loc_type"], _ao["counts"], _ao.get("poi_breakdown", {}), question=_ao.get("question", ""))
 
             st.markdown(msg["content"])
+            _ai_review_notice()
 
             # Download buttons for reports
             if msg.get("docx_bytes") and msg.get("pdf_bytes"):
@@ -4210,6 +4228,7 @@ def process_question(question: str):
                 _STREAM_BUFFERS.pop(_sess_buf_key, None)
 
             if not _ai_error:
+                _ai_review_notice()
                 if datasets:
                     with st.expander("📂 Data sources"):
                         for d in datasets:
