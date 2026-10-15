@@ -262,7 +262,12 @@ class ModelClient:
             token_class = DesktopToken()
             return token_class.token_provider(env="DEV")
         except Exception as e:
-            raise RuntimeError(f"DesktopToken auth failed: {e}. Ensure itsai SDK is installed and you are on a WB machine.")
+            # The originating exception may carry the authorization service's
+            # response body, so only its type is reported and no detail from it
+            # is embedded (ACN-2026-31023, stories 186199 / 186216).
+            raise RuntimeError(
+                f"Desktop authentication failed ({type(e).__name__})."
+            ) from None
 
     def _get_posit_oauth_token(self) -> str:
         """Get Azure AD token via Posit Connect OAuth token exchange (Python Shiny pattern)."""
@@ -273,12 +278,9 @@ class ModelClient:
         oauth_guid       = "20c434c5-78f1-431f-a286-76980748bc93"
 
         if not connect_server or not connect_api_key or not session_token:
-            missing = [v for v, k in [
-                ("CONNECT_SERVER", connect_server),
-                ("CONNECT_API_KEY", connect_api_key),
-                ("CONNECT_CONTENT_SESSION_TOKEN", session_token),
-            ] if not k]
-            raise RuntimeError(f"Missing env vars for Posit OAuth: {', '.join(missing)}")
+            # Which variables are absent is deployment configuration, not
+            # something a user is told (ACN-2026-31023, story 186199).
+            raise RuntimeError("Authentication is not configured for this deployment.")
 
         url  = f"{connect_server}/__api__/v1/oauth/integrations/credentials"
         resp = _req.post(
@@ -298,11 +300,13 @@ class ModelClient:
         if not resp.ok:
             # Response body deliberately excluded — it may echo request material.
             # Only the status code is recorded (ACN-2026-31023, stories 186199/186216).
-            raise RuntimeError(f"Posit OAuth token exchange failed (HTTP {resp.status_code})")
+            raise RuntimeError(
+                f"Authentication with the AI service failed (HTTP {resp.status_code})."
+            )
         token = resp.json().get("access_token", "")
         if not token:
             # Response content deliberately excluded (ACN-2026-31023).
-            raise RuntimeError("Posit OAuth token exchange returned no access_token")
+            raise RuntimeError("Authentication with the AI service did not return a credential.")
         return token
 
     def _get_auth_token(self) -> str:
@@ -316,10 +320,7 @@ class ModelClient:
             token = _os.getenv("MAI_FACTORY_TOKEN", "")
             if token:
                 return token
-            raise RuntimeError(
-                "No auth available on Posit Connect. Either CONNECT_CONTENT_SESSION_TOKEN "
-                "must be set (automatic) or run refresh_mai_token.py on your WB desktop."
-            )
+            raise RuntimeError("Authentication is not configured for this deployment.")
         return self._get_desktop_token()
 
     # ------------------------------------------------------------------
