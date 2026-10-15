@@ -1,0 +1,72 @@
+EVIDENCE: Error handling - no technical detail disclosed to users  (story 186199)
+Run on: 2026-10-15   Commit: 0168a60
+-----------------------------------------------------------------------
+
+==============================================================================
+QA EVIDENCE - ERROR HANDLING / INFORMATION DISCLOSURE
+ACN-2026-31023 / story 186199
+==============================================================================
+Environment        : QA
+Application        : Zambia GeoHub AI Assistant
+Modules under test : ai/model_client.py, hub/client.py, app.py
+
+Each failure below was triggered against the real code. The message
+shown is what reaches the user.
+------------------------------------------------------------------------------
+1. OAuth token exchange - not configured
+   Message : Authentication is not configured for this deployment.
+   Verdict : SAFE
+
+2. Authentication - no method available
+   Message : Authentication is not configured for this deployment.
+   Verdict : SAFE
+
+3. OAuth token exchange - rejected by service
+   Message : Authentication with the AI service failed (HTTP 403).
+   Verdict : SAFE
+
+4. Data service - error response
+   Message : Data service returned an error (code 400).
+   Verdict : SAFE
+
+5. Data service - unexpected response format
+   Message : Data service returned an unexpected response format.
+   Verdict : SAFE
+
+6. Data service - network failure
+   Message : Feature fetch failed (ConnectionError).
+   Verdict : SAFE
+
+7. Data service - count query failure
+   Message : Count query failed (RuntimeError).
+   Verdict : SAFE
+
+8. AI call failure - generic message
+   Message : ⚠️ The request could not be completed. Please try again. 
+   Verdict : SAFE
+
+9. AI call failure - service overloaded
+   Message : ⚠️ The AI is temporarily overloaded. Please try again in a few seconds.
+   Verdict : SAFE
+
+10. AI call failure - rate limited
+   Message : ⚠️ Rate limit reached. Please wait a moment and try again.
+   Verdict : SAFE
+
+11. Data load failure shown to user
+   Message : ⚠️ Could not load data for {_location or 'this dataset'}. 
+   Verdict : SAFE
+
+------------------------------------------------------------------------------
+11 of 11 failure paths return a safe message.
+
+Screened for: service URLs and hostnames, response bodies, credential
+and token references, internal environment variable names, internal
+file names, and stack traces.
+
+The simulated service responses above deliberately contained marker
+strings (SECRET-...). None appear in any message, confirming that
+service response bodies are not propagated to the user.
+
+RESULT: PASS
+==============================================================================

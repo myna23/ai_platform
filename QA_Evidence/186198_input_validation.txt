@@ -1,59 +1,64 @@
-INPUT VALIDATION — place-name allowlist
-Story 186198 | ACN-2026-31023
-=======================================================================
-Generated: 2026-09-29   Environment: Posit Connect QA
-
-CONTROL
+EVIDENCE: Input validation - closed place-name allowlist  (story 186198)
+Run on: 2026-10-15   Commit: 0168a60
 -----------------------------------------------------------------------
-A place name taken from user text is used in a dataset query only if it
-appears in a closed allowlist of known Zambian districts and provinces,
-loaded at startup from the bundled administrative boundary data.
-Anything not in that list is rejected before query construction, so no
-user-supplied string can reach a query clause.
 
-Allowlist size: 126 entries (116 districts + 10 provinces)
+==============================================================================
+QA EVIDENCE - INPUT VALIDATION (CLOSED ALLOWLIST)
+ACN-2026-31023 / story 186198
+==============================================================================
+Environment        : QA
+Application        : Zambia GeoHub AI Assistant
+Control under test : app.py :: _is_valid_place()
+Allowlist source   : data/districts.json + fixed province list
+Allowlist entries  : 126
 
-IMPLEMENTATION (app.py)
------------------------------------------------------------------------
-  2089:def _build_place_allowlist():
-  2090-    """
-  2091-    Closed set of valid Zambian district and province names, loaded from the
-  2092-    bundled administrative boundary data (116 districts).
-  2093-
-  2094-    Input validation control (ACN-2026-31023, story 186198): a place name taken
-  2095-    from user text is only used in a dataset query if it appears in this list.
-  ...
-  2117:def _is_valid_place(name: str) -> bool:
-  2118-    """True only if `name` is a known Zambian district or province."""
-  2119-    if not name:
-  2120-        return False
-  2121-    return name.strip().lower() in _PLACE_ALLOWLIST
-  2122-
+CONTROL AS IT APPEARS IN app.py
+------------------------------------------------------------------------------
+def _is_valid_place(name: str) -> bool:
+    """True only if `name` is a known Zambian district or province."""
+    if not name:
+        return False
+    return name.strip().lower() in _PLACE_ALLOWLIST
+------------------------------------------------------------------------------
 
-ENFORCEMENT POINTS
------------------------------------------------------------------------
-  2071:            locs = [l for l in locs if _is_valid_place(l)]
-  2117:def _is_valid_place(name: str) -> bool:
-  2141:        if _is_valid_place(loc):
-  2147:        if _is_valid_place(loc):
-  2153:        if _is_valid_place(loc):
+ENFORCEMENT POINTS - every call site, located in the current source
+------------------------------------------------------------------------------
+  app.py:2074: locs = [l for l in locs if _is_valid_place(l)]
+  app.py:2163: if not _is_valid_place(cand):
+  app.py:2185: if _is_valid_place(loc):
+  app.py:2191: if _is_valid_place(loc):
+  app.py:2197: if _is_valid_place(loc):
+------------------------------------------------------------------------------
 
-VALIDATION TEST RESULTS
------------------------------------------------------------------------
-  input                              accepted   outcome
-  Lusaka                             yes        valid province - query proceeds
-  Chadiza                            yes        valid district - query proceeds
-  Rufunsa                            yes        valid district - query proceeds
-  Nairobi                            no         not a Zambian place - rejected
-  Atlantis                           no         not a Zambian place - rejected
-  ' OR 1=1--                         no         injection attempt - rejected
-  Robert'); DROP TABLE schools;--    no         injection attempt - rejected
-  <script>alert(1)</script>          no         script payload - rejected
+TEST RESULTS
+------------------------------------------------------------------------------
+#  Input                             Expected  Actual    Result  
+------------------------------------------------------------------------------
+1  Lusaka                            ACCEPT    ACCEPT    PASS    
+2  Chadiza                           ACCEPT    ACCEPT    PASS    
+3  Rufunsa                           ACCEPT    ACCEPT    PASS    
+4  Nairobi                           REJECT    REJECT    PASS    
+5  Atlantis                          REJECT    REJECT    PASS    
+6  ' OR 1=1--                        REJECT    REJECT    PASS    
+7  Robert'); DROP TABLE schools;--   REJECT    REJECT    PASS    
+8  <script>alert(1)</script>         REJECT    REJECT    PASS    
+------------------------------------------------------------------------------
+  1. Valid district and province
+  2. Valid district
+  3. Valid district
+  4. Not a Zambian place
+  5. Not a Zambian place
+  6. Injection attempt
+  7. Injection attempt
+  8. Script payload
+------------------------------------------------------------------------------
+8 of 8 cases passed.
 
-  All 8 cases behaved as expected.
+RESULT: PASS
 
-PRIOR CONTROL (retained, now layered)
------------------------------------------------------------------------
-  Extraction already restricted candidates to 1-3 plain alphabetic words,
-  so punctuation, symbols and query syntax could not be captured. The
-  allowlist adds a closed-set check on top of that restriction.
+Every rejected value is discarded before query construction, so no
+user-supplied string reaches a dataset query clause. Rejection is on
+an allowlist, not a denylist: an input is used only if it matches a
+known district or province, so payloads not represented above are
+rejected by the same rule.
+==============================================================================
