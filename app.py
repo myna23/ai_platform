@@ -30,8 +30,6 @@ from ai.prompts import (
     summarizer_prompt,
     report_system_prompt,
     report_prompt,
-    map_analysis_system_prompt,
-    map_analysis_user_prompt,
 )
 from reports.builder import ReportBuilder
 from utils.geo_utils import (
@@ -1872,8 +1870,7 @@ with st.sidebar:
         _save_current_chat()
         st.session_state.messages = []
         st.session_state["_current_chat_id"] = str(_uuid.uuid4())
-        for _k in ["draw_bbox","_draw_counts","_draw_details","_area_sel_name",
-                   "uploaded_doc_text","uploaded_doc_name","uploaded_img_b64","uploaded_img_name"]:
+        for _k in ["draw_bbox","_draw_counts","_draw_details","_area_sel_name"]:
             st.session_state.pop(_k, None)
         st.rerun()
 
@@ -2027,14 +2024,12 @@ if st.session_state.get("is_generating"):
 # ---------------------------------------------------------------------------
 # Intent detection
 # ---------------------------------------------------------------------------
-def detect_intent(text: str, has_image: bool = False) -> str:
+def detect_intent(text: str) -> str:
     t = text.lower()
     if any(w in t for w in ["report", "generate report", "write report", "create report"]):
         return "report"
     if any(w in t for w in ["summarise", "summarize", "summary", "overview", "brief"]):
         return "summary"
-    if has_image:
-        return "map_analysis"
     return "chat"
 
 
@@ -2870,8 +2865,7 @@ if st.session_state.edit_idx is not None:
 # Process a question (either new or edited)
 # ---------------------------------------------------------------------------
 def process_question(question: str):
-    _has_image = bool(st.session_state.get("uploaded_img_b64"))
-    intent = detect_intent(question, has_image=_has_image)
+    intent = detect_intent(question)
 
     geojson = None
     map_geojson = None   # lightweight copy for map rendering (≤50 features)
@@ -3830,102 +3824,6 @@ def process_question(question: str):
 
     ds = datasets[0] if datasets else {}
 
-    # --- MAP IMAGE ANALYSIS ---
-    if intent == "map_analysis":
-        _img_b64 = st.session_state.get("uploaded_img_b64", "")
-        _img_mime = st.session_state.get("uploaded_img_mime", "image/jpeg")
-        _img_name = st.session_state.get("uploaded_img_name", "Uploaded map")
-
-        with st.chat_message("assistant"):
-            st.markdown('<span class="intent-badge intent-report">Map Analysis</span>', unsafe_allow_html=True)
-
-            # Show the uploaded image inline so the user sees what's being analysed
-            import base64 as _b64img
-            _img_bytes_display = _b64img.b64decode(_img_b64)
-            st.image(_img_bytes_display, caption=_img_name, use_container_width=True)
-
-            _analysis_messages = [
-                {"role": "user", "content": [
-                    {"type": "image", "source": {
-                        "type": "base64", "media_type": _img_mime, "data": _img_b64,
-                    }},
-                    {"type": "text", "text": map_analysis_user_prompt(question, _img_name)},
-                ]}
-            ]
-
-            st.session_state.stop_streaming = False
-            st.session_state.is_generating = True
-            _sess_buf_key_ma = id(st.session_state) + 1
-            _STREAM_BUFFERS[_sess_buf_key_ma] = ""
-
-            def _map_analysis_stream():
-                for chunk in ai_client.stream_with_history(map_analysis_system_prompt(), _analysis_messages, max_tokens=2000):
-                    if st.session_state.get("stop_streaming"):
-                        break
-                    _STREAM_BUFFERS[_sess_buf_key_ma] = _STREAM_BUFFERS.get(_sess_buf_key_ma, "") + chunk
-                    yield chunk
-
-            try:
-                analysis_text = st.write_stream(_map_analysis_stream())
-            except Exception:
-                analysis_text = _STREAM_BUFFERS.get(_sess_buf_key_ma, "⚠️ Something went wrong. Please try again.")
-                st.warning(analysis_text)
-            finally:
-                st.session_state.is_generating = False
-                st.session_state.stop_streaming = False
-                _STREAM_BUFFERS.pop(_sess_buf_key_ma, None)
-
-            # Export buttons — ask the user which format they want
-            st.markdown("---")
-            st.markdown("**Export this analysis:**")
-            _exp_col1, _exp_col2, _exp_col3 = st.columns(3)
-
-            with st.spinner("Preparing exports..."):
-                _exp_docx = builder.to_docx(_img_name, analysis_text, {"name": _img_name, "description": f"Map analysis of {_img_name}"})
-                _exp_pdf = builder.to_pdf(_img_name, analysis_text, {"name": _img_name, "description": f"Map analysis of {_img_name}"})
-
-            _safe_name = _img_name.rsplit(".", 1)[0].replace(" ", "_")
-            _exp_col1.download_button(
-                "⬇️ Word (.docx)", _exp_docx,
-                file_name=f"{_safe_name}_analysis.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"dl_map_docx_{len(st.session_state.messages)}",
-                use_container_width=True,
-            )
-            _exp_col2.download_button(
-                "⬇️ PDF", _exp_pdf,
-                file_name=f"{_safe_name}_analysis.pdf",
-                mime="application/pdf",
-                key=f"dl_map_pdf_{len(st.session_state.messages)}",
-                use_container_width=True,
-            )
-            # Table export — convert the markdown bullet points to a CSV-like text
-            import pandas as _pd_map
-            _table_rows = [
-                {"Section": ln.lstrip("#").strip(), "Content": ""}
-                if ln.startswith("#") else
-                {"Section": "", "Content": ln.lstrip("•- ").strip()}
-                for ln in analysis_text.splitlines()
-                if ln.strip()
-            ]
-            _table_csv = "\n".join(
-                f"{r['Section']}\t{r['Content']}" for r in _table_rows
-            )
-            _exp_col3.download_button(
-                "⬇️ Table (.txt)", _table_csv,
-                file_name=f"{_safe_name}_analysis_table.txt",
-                mime="text/plain",
-                key=f"dl_map_tbl_{len(st.session_state.messages)}",
-                use_container_width=True,
-            )
-
-            st.session_state.messages.append({
-                "role": "assistant", "content": analysis_text, "intent": intent,
-                "ds_name": _img_name, "geojson": None,
-                "docx_bytes": _exp_docx, "pdf_bytes": _exp_pdf,
-            })
-        return
-
     # --- REPORT ---
     if intent == "report":
         with st.chat_message("assistant"):
@@ -4047,24 +3945,7 @@ def process_question(question: str):
                 f"{_cmp_other_note}"
                 if _comparison_locs else ""
             )
-            # Append uploaded document context if present
-            _doc_ctx = ""
-            _doc_text = st.session_state.get("uploaded_doc_text", "")
-            _doc_name = st.session_state.get("uploaded_doc_name", "")
-            if _doc_text:
-                _doc_ctx = (
-                    f"\n\n--- UPLOADED DOCUMENT: {_doc_name} ---\n"
-                    f"{_doc_text[:6000]}"  # cap at 6000 chars to stay within token limits
-                    f"\n--- END OF DOCUMENT ---\n"
-                    "Use the above document as additional context when answering the question. "
-                    "If the question is specifically about the document, prioritise its content."
-                )
-            _draw_counts = st.session_state.get("_draw_counts", {})
-            _draw_counts_note = ""
-            if _draw_counts:
-                _draw_counts_note = " Feature counts in this area: " + ", ".join(
-                    f"{l.split(' ',1)[-1]}: {c}" for l, c in _draw_counts.items()
-                ) + "."
+            _doc_ctx = ""   # no attachments are accepted (story 186189)
             _bbox_note = (
                 f"\n[The user drew an area on the map. {_draw_bbox_location_note}. "
                 f"Coordinates: lat {_draw_bbox['min_lat']:.3f}–{_draw_bbox['max_lat']:.3f}, "
@@ -4163,24 +4044,7 @@ def process_question(question: str):
 
             user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note + _confidence_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
 
-            # If a map image is attached, send it as a vision message block
-            _img_b64 = st.session_state.get("uploaded_img_b64", "")
-            _img_mime = st.session_state.get("uploaded_img_mime", "image/jpeg")
-            _img_name = st.session_state.get("uploaded_img_name", "")
-            if _img_b64:
-                history.append({"role": "user", "content": [
-                    {"type": "image", "source": {
-                        "type": "base64", "media_type": _img_mime, "data": _img_b64,
-                    }},
-                    {"type": "text", "text": (
-                        f"The user has uploaded a map image ({_img_name}). "
-                        "Describe what geographic area, features, or patterns you can see in this image. "
-                        "Then answer their question using both the image and the GeoHub dataset information provided.\n\n"
-                        + user_p
-                    )},
-                ]})
-            else:
-                history.append({"role": "user", "content": user_p})
+            history.append({"role": "user", "content": user_p})
 
             # --- Streaming with stop button ---
             st.session_state.stop_streaming = False
@@ -4470,114 +4334,35 @@ _components.html("""
 """, height=0)
 
 # ---------------------------------------------------------------------------
-# Chat input — paperclip built into bar via accept_file
+# Chat input
 # ---------------------------------------------------------------------------
-_chat_placeholder = (
-    "Ask a question about your map — AI will analyse and extract information from it..."
-    if st.session_state.get("uploaded_img_b64")
-    else "Ask a question, say 'generate a report on...', or 'summarise...'"
+# File attachments are intentionally not offered (ACN-2026-31023, story
+# 186189). The application is approved for PUBLIC data only, and accepting
+# uploads would send their content to the WBG mAI Factory for analysis with no
+# way to establish the classification of what a user attaches. The capability
+# is therefore absent rather than restricted: st.chat_input is created without
+# accept_file, so no attachment control is rendered and no file can be
+# submitted to the application.
+_chat_result = st.chat_input(
+    "Ask a question, say 'generate a report on...', or 'summarise...'"
 )
-_chat_result = st.chat_input(_chat_placeholder, accept_file="multiple",
-                              file_type=["pdf", "docx", "txt", "png", "jpg", "jpeg", "webp"])
 
-# Data-handling notice for attachments (ACN-2026-31023, story 186189).
-# Attached file content is sent to the WBG mAI Factory for analysis, so users
-# are told not to attach personal or restricted material.
 st.caption(
-    "🔒 **Attachments:** content of any file you attach is sent to the WBG mAI Factory "
-    "for analysis. Do not attach personal data, or Confidential, Restricted, or "
-    "Internal Use Only material. This application is approved for PUBLIC data only."
+    "\U0001f512 This application is approved for **PUBLIC data only**. "
+    "File attachments are not accepted. Do not enter personal data, or "
+    "Confidential, Restricted, or Internal Use Only material."
 )
-def _process_confirmed_upload(name: str, raw: bytes):
-    """Parse a confirmed attachment into session state. Only ever reached after
-    the user has actively confirmed the content classification (story 186189)."""
-    import io as _io2
-    lower = name.lower()
-    if lower.endswith((".png", ".jpg", ".jpeg", ".webp")):
-        import base64 as _b64
-        st.session_state["uploaded_img_b64"]  = _b64.b64encode(raw).decode()
-        st.session_state["uploaded_img_mime"] = "image/png" if lower.endswith(".png") else "image/jpeg"
-        st.session_state["uploaded_img_name"] = name
-        return
-    try:
-        if lower.endswith(".pdf"):
-            import pypdf as _pypdf
-            _reader = _pypdf.PdfReader(_io2.BytesIO(raw))
-            _doc_text = "\n".join(p.extract_text() or "" for p in _reader.pages)
-        elif lower.endswith(".docx"):
-            import docx as _docx
-            _doc_obj = _docx.Document(_io2.BytesIO(raw))
-            _doc_text = "\n".join(p.text for p in _doc_obj.paragraphs if p.text.strip())
-        else:
-            _doc_text = raw.decode("utf-8", errors="ignore")
-        if _doc_text.strip():
-            st.session_state["uploaded_doc_text"] = _doc_text.strip()
-            st.session_state["uploaded_doc_name"] = name
-    except Exception:
-        _log_event("upload_parse_failed", "WARN", file_type=lower.rsplit(".", 1)[-1])
-
-
-# ── Required confirmation gate for attachments ───────────────────────────────
-# ACN-2026-31023, story 186189. An attached file is held UNPROCESSED until the
-# user actively confirms its data classification. Nothing is parsed, stored in
-# session state, or sent to the WBG mAI Factory before that confirmation.
-if st.session_state.get("_pending_files"):
-    _pf = st.session_state["_pending_files"]
-    _names = ", ".join(f["name"] for f in _pf)
-    st.error(f"🔒 **Confirmation required before this file is processed — {_names}**")
-    st.markdown(
-        "This application is approved for **PUBLIC data only**. If you continue, the "
-        "content of this file will be sent to the WBG mAI Factory for analysis. "
-        "It will not be read, stored, or transmitted unless you confirm below."
-    )
-    _ok = st.checkbox(
-        "I confirm this file contains no personal data (PII), and no Confidential, "
-        "Restricted, or Internal Use Only material.",
-        key="_upload_confirm_box",
-    )
-    _cc1, _cc2 = st.columns(2)
-    if _cc1.button("Confirm and process", disabled=not _ok,
-                   type="primary", use_container_width=True):
-        for _f in _pf:
-            _process_confirmed_upload(_f["name"], _f["bytes"])
-        _log_event("upload_confirmed", "INFO", files=len(_pf))
-        _held_q = st.session_state.get("_upload_pending_question") or ""
-        st.session_state["_pending_files"] = None
-        st.session_state["_upload_pending_question"] = None
-        if _held_q.strip():
-            st.session_state._pending_question = _held_q
-        st.rerun()
-    if _cc2.button("Cancel and discard", use_container_width=True):
-        _log_event("upload_cancelled", "INFO", files=len(_pf))
-        st.session_state["_pending_files"] = None
-        st.session_state["_upload_pending_question"] = None
-        st.rerun()
-    st.stop()   # nothing below runs until the user confirms or cancels
 
 if _chat_result:
-    # Attachments are held pending explicit confirmation — not parsed here.
-    if _chat_result.files:
-        _pending = []
-        for _af in _chat_result.files:
-            try:
-                _pending.append({"name": _af.name, "bytes": _af.read()})
-            except Exception:
-                pass
-        if _pending:
-            st.session_state["_pending_files"] = _pending
-            st.session_state["_upload_pending_question"] = _chat_result.text or ""
-            _log_event("upload_awaiting_confirmation", "INFO", files=len(_pending))
-            st.rerun()
-    question = _chat_result.text or ""
-    if question.strip() or st.session_state.get("uploaded_img_b64") or st.session_state.get("uploaded_doc_text"):
+    question = _chat_result if isinstance(_chat_result, str) else (_chat_result.text or "")
+    if question.strip():
         if st.session_state.edit_idx is None:
             if "_current_chat_id" not in st.session_state:
                 import uuid as _uuid2
                 st.session_state["_current_chat_id"] = str(_uuid2.uuid4())
-            _display_q = question.strip() or f"[Attached: {(_chat_result.files or ['file'])[0].name if _chat_result.files else 'file'}]"
-            st.session_state.messages.append({"role": "user", "content": _display_q})
+            st.session_state.messages.append({"role": "user", "content": question.strip()})
             with st.chat_message("user"):
-                st.markdown(_display_q)
+                st.markdown(question.strip())
             process_question(question)
             _save_current_chat()
             st.session_state["_scroll_to_bottom"] = True

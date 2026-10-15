@@ -1,0 +1,38 @@
+EVIDENCE: File uploads are not available  (story 186189)
+Run on: 2026-10-15   Commit: d5301ce
+-----------------------------------------------------------------------
+
+==============================================================================
+QA EVIDENCE - FILE UPLOADS NOT AVAILABLE
+ACN-2026-31023 / story 186189
+==============================================================================
+Environment        : QA
+Application        : Zambia GeoHub AI Assistant
+Approved scope     : public data only
+------------------------------------------------------------------------------
+1. No file-upload control is created
+   PASS - no upload widget appears in 15 application .py files
+
+2. Chat input accepts text only
+   PASS - st.chat_input("Ask a question, say 'generate a report on...', or 'summarise...'")
+
+3. No uploaded-file handling code remains
+   PASS - no attachment parsing, decoding or session storage remains
+
+4. No image-analysis path remains
+   PASS - the map-image-analysis intent and its prompts were removed
+
+5. PDF parsing dependency removed
+   PASS - pypdf is not declared in requirements.txt
+
+------------------------------------------------------------------------------
+5 of 5 checks passed.
+
+The application provides no means of submitting a file. No attachment
+control is rendered, and no code exists that would read, decode, store
+or forward uploaded content. A user therefore cannot send personal or
+restricted material to the AI service through this application,
+irrespective of intent.
+
+RESULT: PASS
+==============================================================================
