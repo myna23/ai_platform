@@ -2101,7 +2101,7 @@ def _log_event(event: str, severity: str = "INFO", **fields):
 def _ai_review_notice():
     """
     Human-review notice shown beneath every AI-generated answer
-    (ACN-2026-31023, story 186204).
+    (ACN-2026-31023 — human review of AI output before business use).
 
     The control requires that users are instructed to review AI output before
     relying on it. This is rendered on the shared answer path, so it appears
