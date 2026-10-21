@@ -3988,6 +3988,18 @@ def process_question(question: str):
             if not _location and not _draw_bbox and not _is_meta:
                 _unknown_place = _rejected_place(question)
                 if _unknown_place:
+                    # Detection signal for monitoring (ACN-2026-31023, story
+                    # 186217). A rejected input is recorded so that repeated
+                    # rejections — the signature of probing or injection
+                    # attempts — are visible to the SIEM and can be alerted on.
+                    # The rejected value itself is not logged, only its shape,
+                    # so user-entered text never reaches the log.
+                    _log_event(
+                        "input_rejected", "WARN",
+                        reason="place_not_in_allowlist",
+                        length=len(_unknown_place),
+                        non_alpha=sum(1 for _c in _unknown_place if not _c.isalnum() and _c != " "),
+                    )
                     _low_confidence_user = (
                         f"\u201c{_unknown_place}\u201d was not recognised as a Zambian district "
                         "or province, so the answer below is not filtered to that "
