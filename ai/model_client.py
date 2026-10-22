@@ -145,6 +145,20 @@ def fetch_available_models(provider: str, api_key: str) -> list:
     return fallback
 
 
+def _log_event(event: str, severity: str = "INFO", **fields):
+    """
+    Structured event log, same format the application uses elsewhere
+    (ACN-2026-31023, stories 186216 / 186217).
+
+    Server-side only. Records which authentication step ran or failed, never a
+    token, key, header or service response body. Variable names are recorded
+    because they are deployment configuration, not user or secret material,
+    and without them an authentication failure cannot be diagnosed from logs.
+    """
+    parts = " ".join(f"{k}={v}" for k, v in fields.items() if v not in (None, ""))
+    print(f"ZGIA_EVENT severity={severity} event={event} {parts}".rstrip(), flush=True)
+
+
 def _to_openai_content(messages: list) -> list:
     """
     Translate Anthropic-style content blocks into the OpenAI chat-completions
@@ -260,6 +274,7 @@ class ModelClient:
         try:
             from itsai.platform.authentication import DesktopToken
             token_class = DesktopToken()
+            _log_event("auth_ok", "INFO", method="desktop_token")
             return token_class.token_provider(env="DEV")
         except Exception as e:
             # The originating exception may carry the authorization service's
@@ -279,7 +294,16 @@ class ModelClient:
 
         if not connect_server or not connect_api_key or not session_token:
             # Which variables are absent is deployment configuration, not
-            # something a user is told (ACN-2026-31023, story 186199).
+            # something a user is told (ACN-2026-31023, story 186199) — but it
+            # is recorded server-side, or the failure cannot be diagnosed.
+            missing = [name for name, value in (
+                ("CONNECT_SERVER", connect_server),
+                ("CONNECT_API_KEY", connect_api_key),
+                ("CONNECT_CONTENT_SESSION_TOKEN", session_token),
+            ) if not value]
+            _log_event("auth_failed", "ERROR",
+                       method="posit_oauth", reason="missing_configuration",
+                       missing=",".join(missing))
             raise RuntimeError("Authentication is not configured for this deployment.")
 
         url  = f"{connect_server}/__api__/v1/oauth/integrations/credentials"
@@ -300,13 +324,18 @@ class ModelClient:
         if not resp.ok:
             # Response body deliberately excluded — it may echo request material.
             # Only the status code is recorded (ACN-2026-31023, stories 186199/186216).
+            _log_event("auth_failed", "ERROR", method="posit_oauth",
+                       reason="exchange_rejected", status=resp.status_code)
             raise RuntimeError(
                 f"Authentication with the AI service failed (HTTP {resp.status_code})."
             )
         token = resp.json().get("access_token", "")
         if not token:
+            _log_event("auth_failed", "ERROR", method="posit_oauth",
+                       reason="no_access_token_returned")
             # Response content deliberately excluded (ACN-2026-31023).
             raise RuntimeError("Authentication with the AI service did not return a credential.")
+        _log_event("auth_ok", "INFO", method="posit_oauth")
         return token
 
     def _get_auth_token(self) -> str:
@@ -319,7 +348,12 @@ class ModelClient:
             # Fall back to manually refreshed token
             token = _os.getenv("MAI_FACTORY_TOKEN", "")
             if token:
+                # Static credential path. Recorded so that which method is in
+                # use can be established from logs rather than assumed.
+                _log_event("auth_ok", "WARN", method="static_token")
                 return token
+            _log_event("auth_failed", "ERROR", method="none",
+                       reason="no_authentication_method_available")
             raise RuntimeError("Authentication is not configured for this deployment.")
         return self._get_desktop_token()
 
