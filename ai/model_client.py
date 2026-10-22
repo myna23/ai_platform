@@ -313,30 +313,47 @@ class ModelClient:
             raise RuntimeError("Authentication is not configured for this deployment.")
 
         url  = f"{connect_server}/__api__/v1/oauth/integrations/credentials"
-        resp = _req.post(
-            url,
-            headers={
-                "Authorization": f"Key {connect_api_key}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            data={
-                "grant_type":        "urn:ietf:params:oauth:grant-type:token-exchange",
-                "subject_token_type": "urn:posit:connect:content-session-token",
-                "subject_token":     session_token,
-                "audience":          oauth_guid,
-            },
-            timeout=30,
-        )
-        if not resp.ok:
+        base = {
+            "grant_type":         "urn:ietf:params:oauth:grant-type:token-exchange",
+            "subject_token_type": "urn:posit:connect:content-session-token",
+            "subject_token":      session_token,
+        }
+
+        # Connect already knows which integration this content is associated
+        # with, so the exchange is attempted without naming one first. Sending
+        # an audience Connect does not expect is rejected as a malformed
+        # request (HTTP 400) rather than as a refused credential. If that
+        # attempt fails and an integration identifier is configured, it is
+        # tried again naming it, so either form works.
+        attempts = [("without_audience", dict(base))]
+        if oauth_guid:
+            attempts.append(("with_audience", {**base, "audience": oauth_guid}))
+
+        resp = None
+        for label, payload in attempts:
+            resp = _req.post(
+                url,
+                headers={
+                    "Authorization": f"Key {connect_api_key}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data=payload,
+                timeout=30,
+            )
+            if resp.ok:
+                break
             # Response body deliberately excluded — it may echo request material.
-            # Only the status code is recorded (ACN-2026-31023, stories 186199/186216).
-            # The integration identifier is recorded because a mismatch
-            # between it and the integration attached in Connect is the usual
-            # cause of a rejected exchange, and it cannot be diagnosed without
-            # knowing which one was requested. It is not a credential.
+            # Only the status code is recorded (ACN-2026-31023, stories
+            # 186199/186216). The integration identifier is recorded because a
+            # mismatch with the integration attached in Connect is the usual
+            # cause, and it cannot be diagnosed without knowing which one was
+            # requested. It identifies an integration and is not a credential.
             _log_event("auth_failed", "ERROR", method="posit_oauth",
-                       reason="exchange_rejected", status=resp.status_code,
-                       audience=oauth_guid)
+                       reason="exchange_rejected", attempt=label,
+                       status=resp.status_code,
+                       audience=oauth_guid if label == "with_audience" else None)
+
+        if resp is None or not resp.ok:
             raise RuntimeError(
                 f"Authentication with the AI service failed (HTTP {resp.status_code})."
             )
@@ -352,10 +369,19 @@ class ModelClient:
     def _get_auth_token(self) -> str:
         """Get bearer token — Posit Connect: OAuth token exchange. WB Desktop: DesktopToken."""
         if self.provider in ("WB Posit (Claude)", "WB Posit (GPT)"):
-            # Try OAuth token exchange first (requires CONNECT_CONTENT_SESSION_TOKEN)
+            # OAuth token exchange is the preferred path and is tried first.
+            # If it fails, a configured static token is used rather than the
+            # request failing outright: attaching an integration must not
+            # disable a credential that was previously working.
             session_token = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN", "")
             if session_token:
-                return self._get_posit_oauth_token()
+                try:
+                    return self._get_posit_oauth_token()
+                except Exception:
+                    if not _os.getenv("MAI_FACTORY_TOKEN", ""):
+                        raise
+                    _log_event("auth_fallback", "WARN", method="static_token",
+                               reason="oauth_exchange_failed")
             # Fall back to manually refreshed token
             token = _os.getenv("MAI_FACTORY_TOKEN", "")
             if token:
