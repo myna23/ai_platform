@@ -417,8 +417,16 @@ class ModelClient:
         extra_headers = {}
         if self.provider == "WB Posit (GPT)":
             extra_headers = {"x-source-type": "interactive", "x-team-name": "posit-zambia"}
+        # The gateway a deployment talks to must match the environment its
+        # OAuth integration belongs to: a token issued for one environment is
+        # rejected by another's gateway. MAI_BASE_URL overrides the built-in
+        # value so the deployment can be pointed at the right gateway without
+        # a code change. The URL is not a credential.
+        base_url = _os.getenv("MAI_BASE_URL", "").strip() \
+                   or pinfo.get("mai_base", self.api_key)
+        _log_event("ai_endpoint_selected", "INFO", base_url=base_url)
         return OpenAI(
-            base_url=pinfo.get("mai_base", self.api_key),
+            base_url=base_url,
             api_key=token,
             default_headers=extra_headers,
         )
