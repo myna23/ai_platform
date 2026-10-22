@@ -290,7 +290,13 @@ class ModelClient:
         connect_server   = _os.getenv("CONNECT_SERVER", "").rstrip("/")
         connect_api_key  = _os.getenv("CONNECT_API_KEY", "")
         session_token    = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN", "")
-        oauth_guid       = "20c434c5-78f1-431f-a286-76980748bc93"
+        # The OAuth integration this content is associated with. The exchange
+        # is rejected if this does not match the integration attached in Posit
+        # Connect, so it is configurable: set MAI_OAUTH_GUID in the content's
+        # environment variables to point at a different integration without a
+        # code change. The value is an integration identifier, not a secret.
+        oauth_guid       = _os.getenv("MAI_OAUTH_GUID", "").strip() \
+                           or "20c434c5-78f1-431f-a286-76980748bc93"
 
         if not connect_server or not connect_api_key or not session_token:
             # Which variables are absent is deployment configuration, not
@@ -324,8 +330,13 @@ class ModelClient:
         if not resp.ok:
             # Response body deliberately excluded — it may echo request material.
             # Only the status code is recorded (ACN-2026-31023, stories 186199/186216).
+            # The integration identifier is recorded because a mismatch
+            # between it and the integration attached in Connect is the usual
+            # cause of a rejected exchange, and it cannot be diagnosed without
+            # knowing which one was requested. It is not a credential.
             _log_event("auth_failed", "ERROR", method="posit_oauth",
-                       reason="exchange_rejected", status=resp.status_code)
+                       reason="exchange_rejected", status=resp.status_code,
+                       audience=oauth_guid)
             raise RuntimeError(
                 f"Authentication with the AI service failed (HTTP {resp.status_code})."
             )
