@@ -416,7 +416,11 @@ class ModelClient:
             token = token_class.token_provider(env="DEV")
         extra_headers = {}
         if self.provider == "WB Posit (GPT)":
-            extra_headers = {"x-source-type": "interactive", "x-team-name": "posit-zambia"}
+            # The gateway requires the calling team's name. It must match the
+            # name registered with mAI Factory, so MAI_TEAM_NAME overrides the
+            # built-in value without a code change. It is not a credential.
+            team_name = _os.getenv("MAI_TEAM_NAME", "").strip() or "posit-zambia"
+            extra_headers = {"x-source-type": "interactive", "x-team-name": team_name}
         # The gateway a deployment talks to must match the environment its
         # OAuth integration belongs to: a token issued for one environment is
         # rejected by another's gateway. MAI_BASE_URL overrides the built-in
@@ -424,7 +428,8 @@ class ModelClient:
         # a code change. The URL is not a credential.
         base_url = _os.getenv("MAI_BASE_URL", "").strip() \
                    or pinfo.get("mai_base", self.api_key)
-        _log_event("ai_endpoint_selected", "INFO", base_url=base_url)
+        _log_event("ai_endpoint_selected", "INFO", base_url=base_url,
+                   team=extra_headers.get("x-team-name"))
         return OpenAI(
             base_url=base_url,
             api_key=token,
