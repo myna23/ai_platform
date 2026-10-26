@@ -426,8 +426,11 @@ class ModelClient:
         # rejected by another's gateway. MAI_BASE_URL overrides the built-in
         # value so the deployment can be pointed at the right gateway without
         # a code change. The URL is not a credential.
-        base_url = _os.getenv("MAI_BASE_URL", "").strip() \
-                   or pinfo.get("mai_base", self.api_key)
+        base_url = _os.getenv("MAI_BASE_URL", "").strip().rstrip("/") \
+                   or pinfo.get("mai_base", self.api_key).rstrip("/")
+        # Trailing slash, matching the reference implementation other mAI
+        # Factory apps on this platform use.
+        base_url += "/"
         _log_event("ai_endpoint_selected", "INFO", base_url=base_url,
                    team=extra_headers.get("x-team-name"))
         return OpenAI(

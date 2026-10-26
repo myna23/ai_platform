@@ -4085,7 +4085,18 @@ def process_question(question: str):
                 _err_str = str(e)
                 # Server-side only: log the exception type and message, never a
                 # service response body or token (ACN-2026-31023, story 186216).
-                _log_event("ai_request_failed", "ERROR", error_type=type(e).__name__)
+                # A connection failure wraps its real cause — a name that does
+                # not resolve, a refused connection and a rejected certificate
+                # all surface as the same outer error — so the chain of causing
+                # types is recorded too. Type names only; no message text,
+                # which could carry request or response material.
+                _cause_chain, _c = [], e.__cause__
+                while _c is not None and len(_cause_chain) < 4:
+                    _cause_chain.append(type(_c).__name__)
+                    _c = _c.__cause__ or getattr(_c, "__context__", None)
+                _log_event("ai_request_failed", "ERROR",
+                           error_type=type(e).__name__,
+                           caused_by="<-".join(_cause_chain) or None)
                 if not response:
                     if "overloaded" in _err_str.lower():
                         response = "⚠️ The AI is temporarily overloaded. Please try again in a few seconds."
