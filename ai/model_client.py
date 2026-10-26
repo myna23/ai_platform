@@ -213,7 +213,10 @@ class ModelClient:
         if provider not in PROVIDERS:
             raise ValueError(f"Unknown provider '{provider}'. Choose from: {list(PROVIDERS)}")
         self.provider = provider
-        self.model    = model
+        # MAI_MODEL overrides the model chosen in the interface. A gateway may
+        # only serve particular models, and the names differ between
+        # environments, so the deployment can pin one without a code change.
+        self.model    = _os.getenv("MAI_MODEL", "").strip() or model
         self.api_key  = api_key.strip()
         # Pick up optional base URL for mAI Factory / Azure routing
         pinfo = PROVIDERS[provider]
@@ -289,7 +292,19 @@ class ModelClient:
         import requests as _req
         connect_server   = _os.getenv("CONNECT_SERVER", "").rstrip("/")
         connect_api_key  = _os.getenv("CONNECT_API_KEY", "")
-        session_token    = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN", "")
+        # Connect supplies the content session token either as a file or as an
+        # environment variable, depending on its configuration. The file is
+        # checked first; reading only the variable misses the file case.
+        session_token = ""
+        _token_file = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN_FILE", "")
+        if _token_file and _os.path.exists(_token_file):
+            try:
+                with open(_token_file) as _tf:
+                    session_token = _tf.read().strip()
+            except Exception:
+                session_token = ""
+        if not session_token:
+            session_token = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN", "")
         # The OAuth integration this content is associated with. The exchange
         # is rejected if this does not match the integration attached in Posit
         # Connect, so it is configurable: set MAI_OAUTH_GUID in the content's
@@ -432,7 +447,7 @@ class ModelClient:
         # Factory apps on this platform use.
         base_url += "/"
         _log_event("ai_endpoint_selected", "INFO", base_url=base_url,
-                   team=extra_headers.get("x-team-name"))
+                   team=extra_headers.get("x-team-name"), model=self.model)
         return OpenAI(
             base_url=base_url,
             api_key=token,
