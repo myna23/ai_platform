@@ -42,7 +42,7 @@
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "ai/model_client.py": {
-      "checksum": "466ebb7d76a5f2adf3094cf2bc04ed71"
+      "checksum": "caea6efe17eeae18b4be8c2967f6a0b2"
     },
     "ai/prompts.py": {
       "checksum": "c0637177ed873b0b910e975861f04722"
