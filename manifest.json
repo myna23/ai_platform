@@ -42,13 +42,13 @@
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "ai/model_client.py": {
-      "checksum": "0b73c62c49ac258ead6107be1d0c8f39"
+      "checksum": "466ebb7d76a5f2adf3094cf2bc04ed71"
     },
     "ai/prompts.py": {
       "checksum": "c0637177ed873b0b910e975861f04722"
     },
     "app.py": {
-      "checksum": "e554306d75355954a45e4f7d464c7f88"
+      "checksum": "64824f8b376644dfb8eeef85de0e2201"
     },
     "backend_architecture.html": {
       "checksum": "76d1adec670907917b87fe012c65b356"
