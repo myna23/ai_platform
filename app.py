@@ -1540,6 +1540,8 @@ with st.sidebar:
             ("GPT-4o mini (WB)",      "WB Desktop (GPT)",    "gpt-4o-mini"),
             ("Sonnet (WB)",           "WB Desktop (Claude)", "us.anthropic.claude-sonnet-4-6"),
             ("Haiku (WB)",            "WB Desktop (Claude)", "us.anthropic.claude-haiku-4-5"),
+            ("Sonnet 5.5 (WB)",       "WB Desktop (Claude)", "us.anthropic.claude-sonnet-5-5"),
+            ("Haiku 5.5 (WB)",        "WB Desktop (Claude)", "us.anthropic.claude-haiku-5-5"),
         ]
     elif _posit_configured:
         _sb_model_opts = [
@@ -1550,11 +1552,14 @@ with st.sidebar:
             ("GPT-4o mini",     "WB Posit (GPT)",    "gpt-4o-mini"),
             ("Sonnet",          "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
             ("Haiku",           "WB Posit (Claude)", "us.anthropic.claude-haiku-4-5"),
+            ("Sonnet 5.5",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
+            ("Haiku 5.5",       "WB Posit (Claude)", "us.anthropic.claude-haiku-5-5"),
         ]
     elif _mai_configured:
         _sb_model_opts = [
             ("GPT-4o",        "WB mAI Factory (GPT)",    "gpt-4o"),
             ("GPT-4o mini",   "WB mAI Factory (GPT)",    "gpt-4o-mini"),
+            ("GPT-6 Luna",    "WB mAI Factory (GPT)",    "gpt-6-luna"),
         ]
     else:
         # No WBG provider configured. Direct external AI providers were removed
@@ -1566,6 +1571,7 @@ with st.sidebar:
             ("GPT-5",       "WB Posit (GPT)",    "gpt-5"),
             ("GPT-4o",      "WB Posit (GPT)",    "gpt-4o"),
             ("Sonnet",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
+            ("Sonnet 5.5",  "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
         ]
     _sb_opt_labels = [o[0] for o in _sb_model_opts]
     _sb_opt_models = [o[2] for o in _sb_model_opts]
