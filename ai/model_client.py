@@ -34,6 +34,8 @@ PROVIDERS = {
             "us.anthropic.claude-sonnet-4-6",
             "us.anthropic.claude-haiku-4-5",
             "us.anthropic.claude-opus-4-5",
+            "us.anthropic.claude-sonnet-5-5",
+            "us.anthropic.claude-haiku-5-5",
         ],
         "env_key":  "WB_AZURE_ENDPOINT",
         "package":  "bedrock-claude",
@@ -54,6 +56,8 @@ PROVIDERS = {
         "models":  [
             "us.anthropic.claude-sonnet-4-6",
             "us.anthropic.claude-haiku-4-5",
+            "us.anthropic.claude-sonnet-5-5",
+            "us.anthropic.claude-haiku-5-5",
         ],
         "env_key":  "WB_POSIT",
         "package":  "bedrock-claude",
@@ -64,7 +68,7 @@ PROVIDERS = {
     # Set MAI_FACTORY_TOKEN + MAI_FACTORY_BASE_URL in .env / Posit Connect.
     "WB mAI Factory (GPT)": {
         "best":    "gpt-4o",
-        "models":  ["gpt-4o", "gpt-4o-mini"],
+        "models":  ["gpt-4o", "gpt-4o-mini", "gpt-6-luna"],
         "env_key": "MAI_FACTORY_TOKEN",
         "package": "openai",
         "docs_url": "https://ai.worldbank.org/platform/documentation",
