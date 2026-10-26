@@ -21,7 +21,7 @@ PROVIDERS = {
     # Store the mAI Factory endpoint in WB_AZURE_ENDPOINT in your .env file.
     "WB Desktop (GPT)": {
         "best":       "gpt-5",
-        "models":     ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
+        "models":     ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini", "gpt-6-luna"],
         "env_key":    "WB_AZURE_ENDPOINT",
         "package":    "azure-openai",
         "docs_url":   "https://ai.worldbank.org/",
@@ -46,8 +46,8 @@ PROVIDERS = {
     # the mAI Factory OAuth integration GUID to get an Azure Bearer token.
     # No manual secrets needed — Posit Connect injects CONNECT_SERVER + CONNECT_API_KEY.
     "WB Posit (GPT)": {
-        "best":       "gpt-5",
-        "models":     ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
+        "best":       "gpt-6-luna",
+        "models":     ["gpt-6-luna", "gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
         "env_key":    "WB_POSIT",
         "package":    "azure-openai",
         "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
@@ -143,6 +143,18 @@ def fetch_available_models(provider: str, api_key: str) -> list:
     except Exception:
         pass
     return fallback
+
+
+def _is_reasoning_model(name: str) -> bool:
+    """
+    True for models that take max_completion_tokens rather than max_tokens.
+
+    Matched by family rather than by an exact list, so a newly offered model
+    in the same family does not silently fall back to the older parameter and
+    get rejected by the gateway.
+    """
+    n = (name or "").lower()
+    return n.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4"))
 
 
 def _log_event(event: str, severity: str = "INFO", **fields):
@@ -463,7 +475,7 @@ class ModelClient:
                 {"role": "user",   "content": user},
             ],
         )
-        if self.model in ("gpt-5", "gpt-5-mini"):
+        if _is_reasoning_model(self.model):
             kwargs["max_completion_tokens"] = max_tokens
             kwargs["reasoning_effort"] = "low"
         else:
@@ -480,7 +492,7 @@ class ModelClient:
         client = self._azure_openai_client()
         full_messages = [{"role": "system", "content": system}] + _to_openai_content(messages)
         kwargs = dict(model=self.model, messages=full_messages)
-        if self.model in ("gpt-5", "gpt-5-mini"):
+        if _is_reasoning_model(self.model):
             kwargs["max_completion_tokens"] = max_tokens
             kwargs["reasoning_effort"] = "low"
         else:
