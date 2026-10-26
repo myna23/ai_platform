@@ -25,7 +25,6 @@ PROVIDERS = {
         "env_key":    "WB_AZURE_ENDPOINT",
         "package":    "azure-openai",
         "docs_url":   "https://ai.worldbank.org/",
-        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
     },
     # ── World Bank Desktop (DesktopToken auth) — Claude via mAI Bedrock ─
     # Same DesktopToken auth as GPT, but routes to Bedrock Claude endpoint.
@@ -39,7 +38,6 @@ PROVIDERS = {
         "env_key":  "WB_AZURE_ENDPOINT",
         "package":  "bedrock-claude",
         "docs_url": "https://ai.worldbank.org/",
-        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
     },
     # ── World Bank Posit Connect (OAuth via CONNECT_SERVER + CONNECT_API_KEY) ─
     # Auth: Posit Connect calls /__api__/v1/oauth/integrations/credentials with
@@ -50,7 +48,6 @@ PROVIDERS = {
         "models":     ["gpt-6-luna", "gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
         "env_key":    "WB_POSIT",
         "package":    "azure-openai",
-        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
     },
     "WB Posit (Claude)": {
         "best":    "us.anthropic.claude-sonnet-4-6",
@@ -60,7 +57,6 @@ PROVIDERS = {
         ],
         "env_key":  "WB_POSIT",
         "package":  "bedrock-claude",
-        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
     },
     # ── World Bank mAI Factory (primary for WB deployment) ──────────────
     # Single token from mAI Factory replaces all individual provider keys.
@@ -431,7 +427,6 @@ class ModelClient:
         # endpoint, per the mAI Factory migration notice (legacy conversationalai
         # endpoints deprecated 2026-08-31, disabled 2026-09-30).
         from openai import OpenAI
-        pinfo = PROVIDERS[self.provider]
         if self.provider == "WB Posit (GPT)":
             token = self._get_auth_token()
         else:
@@ -453,8 +448,7 @@ class ModelClient:
         # rejected by another's gateway. MAI_BASE_URL overrides the built-in
         # value so the deployment can be pointed at the right gateway without
         # a code change. The URL is not a credential.
-        base_url = _os.getenv("MAI_BASE_URL", "").strip().rstrip("/") \
-                   or pinfo.get("mai_base", self.api_key).rstrip("/")
+        base_url = _os.getenv("MAI_BASE_URL", "").strip().rstrip("/")
         # Trailing slash, matching the reference implementation other mAI
         # Factory apps on this platform use.
         base_url += "/"
@@ -508,8 +502,8 @@ class ModelClient:
     def _bedrock_claude_ask(self, system, user, max_tokens):
         import requests
         token = self._get_auth_token()
-        pinfo = PROVIDERS[self.provider]
-        url = f"{pinfo['bedrock_base']}{self.model}/converse"
+        bedrock_base = _os.getenv("MAI_BEDROCK_BASE_URL", "").strip().rstrip("/") + "/"
+        url = f"{bedrock_base}{self.model}/converse"
         payload = {
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": max_tokens,
@@ -532,8 +526,8 @@ class ModelClient:
     def _bedrock_claude_stream_history(self, system, messages, max_tokens):
         import requests
         token = self._get_auth_token()
-        pinfo = PROVIDERS[self.provider]
-        url = f"{pinfo['bedrock_base']}{self.model}/converse"
+        bedrock_base = _os.getenv("MAI_BEDROCK_BASE_URL", "").strip().rstrip("/") + "/"
+        url = f"{bedrock_base}{self.model}/converse"
         bedrock_messages = []
         for m in messages:
             role = m["role"]

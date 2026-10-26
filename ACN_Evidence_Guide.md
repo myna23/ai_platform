@@ -220,7 +220,7 @@
 
 **Paste:**
 > The code snippets below show the current QA implementation:
-> - Every AI endpoint configured in the application — **only** `azapimdev.worldbank.org`, using the `maifactory/openai` path for GPT and the Bedrock path for Claude
+> - Every AI endpoint configured in the application — **only** `azapimqa.worldbank.org`, using the `maifactory/openai` path for GPT and the Bedrock path for Claude
 > - A repository search returning **no matches** for `OPENAI_API_KEY`, `GOOGLE_API_KEY`, or the Google generative-AI library — the direct-provider code and its dependency are removed
 > - The complete list of outbound hosts in deployed code: only ArcGIS and worldbank.org remain
 >
@@ -288,7 +288,7 @@
 >
 > The code snippets below list every outbound host in deployed code. Three destinations remain:
 > - Zambia GeoHub ArcGIS REST API — public data, no authentication
-> - WBG mAI Factory gateway (`azapimdev.worldbank.org`) — Azure AD bearer token
+> - WBG mAI Factory gateway (`azapimqa.worldbank.org`) — Azure AD bearer token
 > - Posit Connect OAuth endpoint — platform session token
 >
 > The verification snippet confirms `open-elevation`, `project-osrm`, `routing.openstreetmap`, `overpass`, `maps.mail.ru` and `cartocdn` now return no matches anywhere in the codebase.

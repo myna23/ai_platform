@@ -126,7 +126,7 @@ Python, Streamlit, WBG Posit Connect, ArcGIS REST API (Esri), WBG mAI Factory (A
 No
 
 **Supporting Enterprise Platforms**
-WBG Posit Connect, WBG mAI Factory (azapimdev.worldbank.org)
+WBG Posit Connect, WBG mAI Factory (azapimqa.worldbank.org)
 
 **Does this application have interfaces with other applications?**
 Yes — both integrations below are WBG-operated systems (not third-party public APIs), so they count as interfaces with other WBG applications rather than external services.
@@ -135,7 +135,7 @@ Yes — both integrations below are WBG-operated systems (not third-party public
 Zambia GeoHub (zmb-geowb.hub.arcgis.com) — the application queries the GeoHub ArcGIS FeatureServer REST API and Hub Search API, and receives public geospatial dataset records (GeoJSON) and dataset metadata in response.
 
 **Outbound Interfaces**
-WBG mAI Factory (azapimdev.worldbank.org) — the application sends the user's question plus a sampled excerpt of retrieved dataset records (no PII) to the mAI Factory API for AI inference, and receives the generated analysis text back over the same channel.
+WBG mAI Factory (azapimqa.worldbank.org) — the application sends the user's question plus a sampled excerpt of retrieved dataset records (no PII) to the mAI Factory API for AI inference, and receives the generated analysis text back over the same channel.
 
 **Additional Comments**
 Application scope was recently narrowed to public-only GeoHub datasets (no private/token-gated data) and no third-party public APIs (Open-Elevation, OSRM removed), in response to OIS security review feedback. See attached architecture diagrams and solution concept document.

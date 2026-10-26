@@ -38,7 +38,7 @@ Verified on:  2026-09-30 18:41
 4. EVERY OUTBOUND HOST IN THE DEPLOYED CODE
 ---------------------------------------------------------------------------
         ai.worldbank.org
-        azapimdev.worldbank.org
+        azapimqa.worldbank.org
         services.arcgis.com
         services3.arcgis.com
         services6.arcgis.com

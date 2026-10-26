@@ -454,20 +454,20 @@ else:
 PROVIDERS = {
     "WB Desktop (GPT)": {
         "models":   ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
-        "mai_base": "https://azapimdev.worldbank.org/maifactory/openai",
+        "mai_base": "https://azapimqa.worldbank.org/maifactory/openai",
     },
     "WB Desktop (Claude)": {
         "models": ["us.anthropic.claude-sonnet-4-6", "us.anthropic.claude-haiku-4-5"],
-        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+        "bedrock_base": "https://azapimqa.worldbank.org/conversationalai/bedrock/model/",
     },
     "WB Posit (GPT)": {
         "models":   ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
         "env_key":  "WB_POSIT",
-        "mai_base": "https://azapimdev.worldbank.org/maifactory/openai",
+        "mai_base": "https://azapimqa.worldbank.org/maifactory/openai",
     },
     "WB Posit (Claude)": {
         "models": ["us.anthropic.claude-sonnet-4-6", "us.anthropic.claude-haiku-4-5"],
-        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+        "bedrock_base": "https://azapimqa.worldbank.org/conversationalai/bedrock/model/",
     },
     # NOTE: direct external AI provider paths (OpenAI API, Google Gemini) were
     # removed under OIS security review (ACN-2026-31023). All AI inference is
@@ -476,7 +476,7 @@ PROVIDERS = {
 }
 ```
 
-Every AI destination is `azapimdev.worldbank.org`. There is no other.
+Every AI destination is `azapimqa.worldbank.org`. There is no other.
 
 **Verification that external providers are gone:**
 
@@ -632,11 +632,11 @@ PROVIDERS = {
     "WB Posit (GPT)": {
         "models":   ["gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
         "env_key":  "WB_POSIT",
-        "mai_base": "https://azapimdev.worldbank.org/maifactory/openai",
+        "mai_base": "https://azapimqa.worldbank.org/maifactory/openai",
     },
     "WB Posit (Claude)": {
         "models": ["us.anthropic.claude-sonnet-4-6", "us.anthropic.claude-haiku-4-5"],
-        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+        "bedrock_base": "https://azapimqa.worldbank.org/conversationalai/bedrock/model/",
     },
     # NOTE: direct external AI provider paths (OpenAI API, Google Gemini) were
     # removed under OIS security review (ACN-2026-31023). All AI inference is
@@ -667,7 +667,7 @@ $ grep -rniE "OPENAI_API_KEY|GOOGLE_API_KEY|generativeai|api\.openai\.com" \
 
 ```
 ai.worldbank.org            <- documentation link shown in UI, not an API call
-azapimdev.worldbank.org     <- WBG mAI Factory gateway
+azapimqa.worldbank.org     <- WBG mAI Factory gateway
 services.arcgis.com         <- Zambia GeoHub (public datasets)
 services3.arcgis.com        <- Zambia GeoHub (public datasets)
 services6.arcgis.com        <- Zambia GeoHub (public datasets)
@@ -752,7 +752,7 @@ $ grep -rniE "open-elevation|project-osrm|routing\.openstreetmap" \
 
 ```
 ai.worldbank.org            <- documentation link shown in UI, not an API call
-azapimdev.worldbank.org     <- WBG mAI Factory gateway
+azapimqa.worldbank.org     <- WBG mAI Factory gateway
 services.arcgis.com         <- Zambia GeoHub (public datasets)
 services3.arcgis.com        <- Zambia GeoHub (public datasets)
 services6.arcgis.com        <- Zambia GeoHub (public datasets)
@@ -768,7 +768,7 @@ zmb-geowb.hub.arcgis.com    <- Zambia GeoHub portal
 | Destination | Purpose | Authentication |
 |---|---|---|
 | Zambia GeoHub ArcGIS REST API | Public geospatial records | None — public data |
-| `azapimdev.worldbank.org` | AI inference | Azure AD bearer token |
+| `azapimqa.worldbank.org` | AI inference | Azure AD bearer token |
 | Posit Connect OAuth endpoint | Obtaining that token | Platform session token |
 
 **Verification that previously-used external services are gone:**
