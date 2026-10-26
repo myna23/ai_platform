@@ -47,7 +47,7 @@ PROVIDERS = {
     # No manual secrets needed — Posit Connect injects CONNECT_SERVER + CONNECT_API_KEY.
     "WB Posit (GPT)": {
         "best":       "gpt-6-luna",
-        "models":     ["gpt-6-luna", "gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
+        "models":     ["gpt-6-luna", "gpt-5", "gpt-5-mini"],
         "env_key":    "WB_POSIT",
         "package":    "azure-openai",
     },
@@ -55,7 +55,6 @@ PROVIDERS = {
         "best":    "us.anthropic.claude-sonnet-4-6",
         "models":  [
             "us.anthropic.claude-sonnet-4-6",
-            "us.anthropic.claude-haiku-4-5",
             "us.anthropic.claude-sonnet-5-5",
             "us.anthropic.claude-haiku-5-5",
         ],
@@ -88,6 +87,9 @@ _mai_token = _os.getenv("MAI_FACTORY_TOKEN", "")
 if _wb_azure:
     DEFAULT_PROVIDER = "WB Desktop (GPT)"
     DEFAULT_MODEL    = "gpt-5"
+elif _on_posit:
+    DEFAULT_PROVIDER = "WB Posit (GPT)"
+    DEFAULT_MODEL    = "gpt-6-luna"
 elif _mai_token:
     DEFAULT_PROVIDER = "WB mAI Factory (GPT)"
     DEFAULT_MODEL    = "gpt-4o"
@@ -100,7 +102,7 @@ else:
 BEST_MODELS = [
     ("WB Desktop (GPT)",     "gpt-5"),
     ("WB Desktop (Claude)",  "us.anthropic.claude-sonnet-4-6"),
-    ("WB Posit (GPT)",       "gpt-4o"),
+    ("WB Posit (GPT)",       "gpt-6-luna"),
     ("WB Posit (Claude)",    "us.anthropic.claude-sonnet-4-6"),
     ("WB mAI Factory (GPT)", "gpt-4o"),
 ]

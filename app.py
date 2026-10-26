@@ -1548,10 +1548,7 @@ with st.sidebar:
             ("GPT-6 Luna",      "WB Posit (GPT)",    "gpt-6-luna"),
             ("GPT-5",           "WB Posit (GPT)",    "gpt-5"),
             ("GPT-5 mini",      "WB Posit (GPT)",    "gpt-5-mini"),
-            ("GPT-4o",          "WB Posit (GPT)",    "gpt-4o"),
-            ("GPT-4o mini",     "WB Posit (GPT)",    "gpt-4o-mini"),
             ("Sonnet",          "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
-            ("Haiku",           "WB Posit (Claude)", "us.anthropic.claude-haiku-4-5"),
             ("Sonnet 5.5",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
             ("Haiku 5.5",       "WB Posit (Claude)", "us.anthropic.claude-haiku-5-5"),
         ]
@@ -1569,7 +1566,6 @@ with st.sidebar:
         _sb_model_opts = [
             ("GPT-6 Luna",  "WB Posit (GPT)",    "gpt-6-luna"),
             ("GPT-5",       "WB Posit (GPT)",    "gpt-5"),
-            ("GPT-4o",      "WB Posit (GPT)",    "gpt-4o"),
             ("Sonnet",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
             ("Sonnet 5.5",  "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
         ]
