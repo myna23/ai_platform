@@ -456,8 +456,15 @@ class ModelClient:
         # Trailing slash, matching the reference implementation other mAI
         # Factory apps on this platform use.
         base_url += "/"
+        # A URL copied from a chat or document can carry a non-ASCII lookalike
+        # character - a Cyrillic "a", a zero-width space - which renders
+        # identically but fails DNS resolution. Any such character is escaped
+        # here so it is visible in the log rather than invisible.
+        _url_check = base_url.encode("ascii", "backslashreplace").decode()
         _log_event("ai_endpoint_selected", "INFO", base_url=base_url,
-                   team=extra_headers.get("x-team-name"), model=self.model)
+                   team=extra_headers.get("x-team-name"), model=self.model,
+                   url_ascii=("yes" if _url_check == base_url else "NO"),
+                   url_escaped=(None if _url_check == base_url else _url_check))
         return OpenAI(
             base_url=base_url,
             api_key=token,
