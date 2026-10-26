@@ -39,7 +39,7 @@ This document is intended for the following audience:
 | OIS | World Bank Office of Information Security |
 | ACN | Architecture Change Notification |
 | GeoHub | Zambia National Geospatial Data Hub (zmb-geowb.hub.arcgis.com) |
-| mAI Factory | WBG AI platform (azapimdev.worldbank.org) |
+| mAI Factory | WBG AI platform (azapimqa.worldbank.org) |
 | GRID3 | Geo-Referenced Infrastructure and Demographic Data for Development |
 | RLS | Row-Level Security |
 | SPA | Single-Page Application |
@@ -99,7 +99,7 @@ The overall solution is a **stateless Python web application** deployed on WBG P
               ▼                 ▼
 ┌──────────────────┐   ┌────────────────────────────────────────┐
 │  Zambia GeoHub   │   │  WBG mAI Factory                       │
-│  (ArcGIS Online) │   │  azapimdev.worldbank.org               │
+│  (ArcGIS Online) │   │  azapimqa.worldbank.org               │
 │  FeatureServer   │   │  GPT-5 / Claude Sonnet via Bedrock     │
 │  REST API        │   │  Auth: Posit Connect OAuth             │
 └──────────────────┘   └────────────────────────────────────────┘
@@ -153,7 +153,7 @@ User types: "How many schools are in Chongwe District?"
                          ▼
           ┌──────────────────────────────────────┐
           │  6. WBG mAI Factory API Call         │
-          │     POST azapimdev.worldbank.org/... │
+          │     POST azapimqa.worldbank.org/... │
           │     Auth: Bearer (OAuth token)       │
           │     → streaming text response        │
           └──────────────┬───────────────────────┘
@@ -187,7 +187,7 @@ Fallback: If the live API is unavailable, the app reads pre-bundled static GeoJS
 The user question and dataset records (≤15 sampled features + pre-aggregated counts) are sent to the WBG mAI Factory. On Posit Connect, authentication uses the **Posit Connect OAuth 2.0 token exchange** flow (RFC 8693):
 - Posit Connect auto-injects `CONNECT_CONTENT_SESSION_TOKEN` per viewer session
 - The app exchanges this for an Azure AD Bearer token via `POST CONNECT_SERVER/__api__/v1/oauth/integrations/credentials`
-- The Bearer token is passed to `azapimdev.worldbank.org` for AI inference
+- The Bearer token is passed to `azapimqa.worldbank.org` for AI inference
 - No AI API keys are stored in the application; all auth is handled via Posit Connect OAuth
 
 ### Technology Stack Summary
@@ -219,8 +219,8 @@ The user question and dataset records (≤15 sampled features + pre-aggregated c
 |---|---|---|---|
 | ArcGIS FeatureServer `/query` | GET | Read | Fetches GeoJSON feature records from Zambia GeoHub datasets |
 | ArcGIS Hub `/api/v3/search` | GET | Read | Searches the GeoHub catalog for datasets matching a keyword query |
-| `azapimdev.worldbank.org/conversationalai/v2/` (GPT) | POST | Read (consume) | Sends prompt + data to WBG mAI Factory for AI inference |
-| `azapimdev.worldbank.org/conversationalai/bedrock/model/` (Claude) | POST | Read (consume) | Sends prompt + data to WBG Bedrock Claude endpoint |
+| `azapimqa.worldbank.org/conversationalai/v2/` (GPT) | POST | Read (consume) | Sends prompt + data to WBG mAI Factory for AI inference |
+| `azapimqa.worldbank.org/conversationalai/bedrock/model/` (Claude) | POST | Read (consume) | Sends prompt + data to WBG Bedrock Claude endpoint |
 | `CONNECT_SERVER/__api__/v1/oauth/integrations/credentials` | POST | Read | Posit Connect token exchange — gets Azure AD Bearer token for mAI Factory |
 
 ### Cloud Authorization Matrix (Posit Connect Deployment)
@@ -229,13 +229,13 @@ The user question and dataset records (≤15 sampled features + pre-aggregated c
 |---|---|---|---|
 | Posit Connect Content Service (CONNECT_API_KEY) | Posit Connect OAuth endpoint | Read | Used by the app to initiate OAuth token exchange for mAI Factory access |
 | Posit Connect Session Token (CONNECT_CONTENT_SESSION_TOKEN) | Posit Connect OAuth endpoint | Read | Per-viewer session token auto-injected by Posit Connect; identifies the calling user |
-| Azure AD Bearer Token (obtained via OAuth exchange) | WBG mAI Factory API (azapimdev.worldbank.org) | Write (invoke AI) | Short-lived token used to call GPT-5 / Claude models; scoped to the mAI Factory integration |
+| Azure AD Bearer Token (obtained via OAuth exchange) | WBG mAI Factory API (azapimqa.worldbank.org) | Write (invoke AI) | Short-lived token used to call GPT-5 / Claude models; scoped to the mAI Factory integration |
 
 ### Integration Table
 
 | Source System | Target System | Integration Purpose | Authentication / Authorization Method | Scopes / Permissions |
 |---|---|---|---|---|
-| Streamlit App (Posit Connect) | WBG mAI Factory (azapimdev.worldbank.org) | AI natural language inference — send question + dataset excerpt, receive analysis | Posit Connect OAuth 2.0 token exchange (RFC 8693); DesktopToken on WB machines | mAI Factory integration GUID: `20c434c5-78f1-431f-a286-76980748bc93`; Read (invoke AI completions) |
+| Streamlit App (Posit Connect) | WBG mAI Factory (azapimqa.worldbank.org) | AI natural language inference — send question + dataset excerpt, receive analysis | Posit Connect OAuth 2.0 token exchange (RFC 8693); DesktopToken on WB machines | mAI Factory integration GUID: `20c434c5-78f1-431f-a286-76980748bc93`; Read (invoke AI completions) |
 | Streamlit App (Posit Connect) | Zambia GeoHub ArcGIS FeatureServer | Retrieve live geospatial feature records (schools, health, roads, etc.) | Public datasets only: no authentication | Read-only: `outFields=*&resultRecordCount=200&f=geojson` |
 | Streamlit App (Posit Connect) | ArcGIS Hub Search API (`/api/v3/search`) | Discover available datasets in the GeoHub catalog | No authentication (public search endpoint) | Read-only: dataset metadata only (title, URL, description) |
 

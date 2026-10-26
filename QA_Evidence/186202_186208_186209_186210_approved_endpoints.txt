@@ -6,7 +6,7 @@ Generated: 2026-09-29   Commit: 9231a5f   Env: Posit Connect QA
 [1] Complete list of outbound hosts referenced in deployed application code
 -----------------------------------------------------------------------
     ai.worldbank.org
-    azapimdev.worldbank.org
+    azapimqa.worldbank.org
     services.arcgis.com
     services3.arcgis.com
     services6.arcgis.com
@@ -33,10 +33,10 @@ Generated: 2026-09-29   Commit: 9231a5f   Env: Posit Connect QA
 
 [3] Configured AI endpoints (ai/model_client.py)
 -----------------------------------------------------------------------
-    28:        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
-    42:        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
-    53:        "mai_base":   "https://azapimdev.worldbank.org/maifactory/openai",
-    63:        "bedrock_base": "https://azapimdev.worldbank.org/conversationalai/bedrock/model/",
+    28:        "mai_base":   "https://azapimqa.worldbank.org/maifactory/openai",
+    42:        "bedrock_base": "https://azapimqa.worldbank.org/conversationalai/bedrock/model/",
+    53:        "mai_base":   "https://azapimqa.worldbank.org/maifactory/openai",
+    63:        "bedrock_base": "https://azapimqa.worldbank.org/conversationalai/bedrock/model/",
     303:            base_url=pinfo.get("mai_base", self.api_key),
     351:        url = f"{pinfo['bedrock_base']}{self.model}/converse"
     375:        url = f"{pinfo['bedrock_base']}{self.model}/converse"
