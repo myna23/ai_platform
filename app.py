@@ -1533,6 +1533,7 @@ with st.sidebar:
     _posit_configured    = bool(_os.getenv("WB_POSIT", ""))  # set manually in Posit Connect Vars tab
     if _wb_azure_configured:
         _sb_model_opts = [
+            ("GPT-6 Luna (WB)",       "WB Desktop (GPT)",    "gpt-6-luna"),
             ("GPT-5 (WB)",            "WB Desktop (GPT)",    "gpt-5"),
             ("GPT-5 mini (WB)",       "WB Desktop (GPT)",    "gpt-5-mini"),
             ("GPT-4o (WB)",           "WB Desktop (GPT)",    "gpt-4o"),
@@ -1542,6 +1543,7 @@ with st.sidebar:
         ]
     elif _posit_configured:
         _sb_model_opts = [
+            ("GPT-6 Luna",      "WB Posit (GPT)",    "gpt-6-luna"),
             ("GPT-5",           "WB Posit (GPT)",    "gpt-5"),
             ("GPT-5 mini",      "WB Posit (GPT)",    "gpt-5-mini"),
             ("GPT-4o",          "WB Posit (GPT)",    "gpt-4o"),
@@ -1560,6 +1562,7 @@ with st.sidebar:
         # through the WBG mAI Factory gateway, so the Posit Connect OAuth path is
         # shown here and will surface a configuration notice until WB_POSIT is set.
         _sb_model_opts = [
+            ("GPT-6 Luna",  "WB Posit (GPT)",    "gpt-6-luna"),
             ("GPT-5",       "WB Posit (GPT)",    "gpt-5"),
             ("GPT-4o",      "WB Posit (GPT)",    "gpt-4o"),
             ("Sonnet",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
