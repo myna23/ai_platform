@@ -449,10 +449,17 @@ class ModelClient:
             extra_headers = {"x-source-type": "interactive", "x-team-name": team_name}
         # The gateway a deployment talks to must match the environment its
         # OAuth integration belongs to: a token issued for one environment is
-        # rejected by another's gateway. MAI_BASE_URL overrides the built-in
-        # value so the deployment can be pointed at the right gateway without
-        # a code change. The URL is not a credential.
+        # The gateway is named only by MAI_BASE_URL, so that no environment's
+        # hostname is carried in the code. It therefore has to be set: without
+        # it the base URL would collapse to "/" and every call would fail
+        # somewhere far from the cause.
         base_url = _os.getenv("MAI_BASE_URL", "").strip().rstrip("/")
+        if not base_url:
+            _log_event("auth_failed", "ERROR", method="none",
+                       reason="mai_base_url_not_set")
+            raise RuntimeError(
+                "The AI service endpoint is not configured for this deployment."
+            )
         # Trailing slash, matching the reference implementation other mAI
         # Factory apps on this platform use.
         base_url += "/"

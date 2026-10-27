@@ -24,7 +24,7 @@
       "checksum": "7d6732e8c1c4a3273a1be0b6c920b968"
     },
     "ACN_Zambia_GeoHub_AI_Solution_Architecture.md": {
-      "checksum": "9e41d3128ff36d6ecddd2764bba2f8e0"
+      "checksum": "0a53faa666128bb8298ac1a5880f9c6d"
     },
     "CONTRIBUTING.md": {
       "checksum": "ec7d30085fcca57076bb05a2018ac3d8"
@@ -42,13 +42,13 @@
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "ai/model_client.py": {
-      "checksum": "2f962689ac3451c7cdb398c1e39e22f6"
+      "checksum": "17fd1654018cb032221a67a46749d868"
     },
     "ai/prompts.py": {
       "checksum": "c0637177ed873b0b910e975861f04722"
     },
     "app.py": {
-      "checksum": "00e79f3dce3bfa2fbc17f59d0bd98b0c"
+      "checksum": "3b9ffa17846cac5c83700c3c08a8a6ee"
     },
     "backend_architecture.html": {
       "checksum": "76d1adec670907917b87fe012c65b356"
