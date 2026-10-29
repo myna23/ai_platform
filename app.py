@@ -1584,6 +1584,29 @@ with st.sidebar:
         st.session_state["ai_model"]    = _sb_sel_opt[2]
         st.rerun()
 
+    # Connection check — obtains a token and reports what it is for, without
+    # asking a question. On a new server or platform this answers "is this
+    # configured correctly" directly, instead of by reading logs after a
+    # failure. The token itself is never shown.
+    with st.expander("Check AI connection"):
+        if st.button("Run check", use_container_width=True, key="sb_conn_check"):
+            _chk = ai_client.check_connection()
+            if _chk.get("ok"):
+                st.success("Authentication succeeded")
+            else:
+                st.error("Authentication failed")
+                st.caption(_chk.get("error", ""))
+            st.caption(f"**Endpoint** {_chk['endpoint']}")
+            st.caption(f"**Model** {_chk['model']}  ·  **Team** {_chk['team']}")
+            st.caption(f"**Integration** {_chk['integration']}")
+            if _chk.get("audience"):
+                st.caption(f"**Token audience** {_chk['audience']}")
+            if _chk.get("app_id"):
+                st.caption(f"**App id** {_chk['app_id']}")
+            if _chk.get("expires"):
+                st.caption(f"**Expires** {_chk['expires']}")
+            st.caption("A token here does not prove the model is reachable — "
+                       "ask a question to confirm that.")
 
     # Language
     _lang = st.selectbox(

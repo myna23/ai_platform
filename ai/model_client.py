@@ -394,6 +394,53 @@ class ModelClient:
         _log_event("auth_ok", "INFO", method="posit_oauth")
         return token
 
+    def check_connection(self) -> dict:
+        """
+        Obtain a token and report what it is for, without using it.
+
+        Answers, in one step, the questions that are otherwise only visible by
+        reading logs after a failed question: did authentication work, which
+        service is the token addressed to, when does it expire, and which
+        gateway and model would be called. On a new server or platform this is
+        the first thing worth running.
+
+        Returns a dict of plain values. The token itself is never included.
+        """
+        import base64 as _b64
+        import json as _json
+        from datetime import datetime as _dt, timezone as _tz
+
+        info = {
+            "ok": False,
+            "endpoint": _os.getenv("MAI_BASE_URL", "").strip() or "(not set)",
+            "model": self.model,
+            "team": _os.getenv("MAI_TEAM_NAME", "").strip() or "posit-zambia",
+            "integration": _os.getenv("MAI_OAUTH_GUID", "").strip()
+                           or "(not set - Connect resolves the attached one)",
+        }
+        try:
+            token = self._get_auth_token()
+        except Exception as exc:
+            info["error"] = f"{type(exc).__name__}: {exc}"
+            return info
+
+        info["ok"] = True
+        # A bearer token's middle segment carries its claims. Decoding them is
+        # not verification; it only reports who the token says it is for.
+        try:
+            payload = token.split(".")[1]
+            claims = _json.loads(_b64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+        except Exception:
+            info["audience"] = "(token received, claims not readable)"
+            return info
+
+        info["audience"] = claims.get("aud") or "(none)"
+        info["app_id"] = claims.get("appid") or claims.get("azp") or "(none)"
+        exp = claims.get("exp")
+        if exp:
+            info["expires"] = _dt.fromtimestamp(exp, _tz.utc).strftime("%Y-%m-%d %H:%M UTC")
+        return info
+
     def _get_auth_token(self) -> str:
         """Get bearer token — Posit Connect: OAuth token exchange. WB Desktop: DesktopToken."""
         if self.provider in ("WB Posit (Claude)", "WB Posit (GPT)"):
