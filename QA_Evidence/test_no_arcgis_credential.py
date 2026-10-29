@@ -29,9 +29,17 @@ def record(name, detail, ok):
 # ---------------------------------------------------------------------------
 # 1. No credential-handling code anywhere in the application
 # ---------------------------------------------------------------------------
+# Named symbols, plus the shapes a credential takes when it is passed as an
+# ordinary parameter. The first list alone once missed a client class whose
+# constructor accepted token, username and password.
 PATTERNS = [
     r"_ARCGIS_TOKEN", r"arcgis_token", r"\bset_token\b", r"_token_params",
     r"generateToken", r"token_expired", r"_needs_token",
+    r"\btoken\s*[:=]\s*[\"']",          # token="..." or token: "..."
+    r"\busername\s*[:=]\s*[\"']",       # username="..."
+    r"\bpassword\s*[:=]\s*[\"']",       # password="..."
+    r"\bArcGISClient\s*\(",             # the SDK wrapper itself
+    r"\bfrom\s+arcgis\b", r"\bimport\s+arcgis\b",
 ]
 
 # Application source only. Virtual environments and installed packages are

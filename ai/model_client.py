@@ -317,13 +317,14 @@ class ModelClient:
                 session_token = ""
         if not session_token:
             session_token = _os.getenv("CONNECT_CONTENT_SESSION_TOKEN", "")
-        # The OAuth integration this content is associated with. The exchange
-        # is rejected if this does not match the integration attached in Posit
-        # Connect, so it is configurable: set MAI_OAUTH_GUID in the content's
-        # environment variables to point at a different integration without a
-        # code change. The value is an integration identifier, not a secret.
-        oauth_guid       = _os.getenv("MAI_OAUTH_GUID", "").strip() \
-                           or "20c434c5-78f1-431f-a286-76980748bc93"
+        # The OAuth integration this content is associated with. Integration
+        # identifiers differ between servers and environments, so none is
+        # carried in the code: set MAI_OAUTH_GUID in the content's environment
+        # variables where one is needed. Left unset, the exchange names no
+        # integration and Connect resolves the one attached to the content,
+        # which is what a single-integration deployment wants. It is an
+        # identifier, not a secret.
+        oauth_guid       = _os.getenv("MAI_OAUTH_GUID", "").strip()
 
         if not connect_server or not connect_api_key or not session_token:
             # Which variables are absent is deployment configuration, not

@@ -42,7 +42,7 @@
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "ai/model_client.py": {
-      "checksum": "17fd1654018cb032221a67a46749d868"
+      "checksum": "b785d2932486f744db593cc6775c2e75"
     },
     "ai/prompts.py": {
       "checksum": "c0637177ed873b0b910e975861f04722"
@@ -159,7 +159,7 @@
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"
     },
     "hub/client.py": {
-      "checksum": "2c93ade3678e2f4d16a9256c687febf8"
+      "checksum": "3c2085d7b6c91cc8e965fed24cb32825"
     },
     "reports/__init__.py": {
       "checksum": "d41d8cd98f00b204e9800998ecf8427e"

@@ -21,14 +21,6 @@ try:
 except Exception:
     pass
 
-# ArcGIS API for Python — optional parallel fetch path
-try:
-    from hub import arcgis_client as _agis
-    _ARCGIS_AVAILABLE = _agis.is_available()
-except Exception:
-    _agis = None  # type: ignore
-    _ARCGIS_AVAILABLE = False
-
 load_dotenv()
 
 MAX_FEATURES = int(os.getenv("MAX_FEATURES", "200"))
@@ -249,9 +241,6 @@ class HubClient:
         })
         self._catalog: list = []  # cached on first use
 
-        # ArcGIS API for Python client — used as primary fetch path when available.
-        # Falls back to the requests path below if it raises any exception.
-        self._agis = _agis.get_client() if _ARCGIS_AVAILABLE and _agis else None
 
     # ------------------------------------------------------------------
     # Public API
@@ -372,22 +361,10 @@ class HubClient:
             prov_clause = f"Province='{province_filter}' OR PROVINCE='{province_filter}'"
             where = prov_clause if where == "1=1" else f"({where}) AND ({prov_clause})"
 
-        # ---- Primary path: ArcGIS API for Python ----
-        # Uses the official Esri SDK which sends headers accepted by more ArcGIS servers,
-        # especially from cloud datacenter IPs that the raw requests path can't reach.
-        if self._agis:
-            try:
-                geojson = self._agis.query_features(
-                    feature_url=base,
-                    where=where,
-                    max_features=geom_limit,
-                )
-                if geojson.get("features"):
-                    return geojson
-            except Exception:
-                pass  # Fall through to requests path
-
-        # ---- Fallback path: raw requests ----
+        # Anonymous HTTP request. The Esri SDK path that previously sat in
+        # front of this was removed: it was never deployed, and its client
+        # accepted token and username/password parameters, which the approved
+        # public-data-only scope does not use (ACN-2026-31023).
         params = {
             "where": where,
             "outFields": "*",
