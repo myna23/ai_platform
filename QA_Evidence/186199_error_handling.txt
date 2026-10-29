@@ -1,7 +1,10 @@
 EVIDENCE: Error handling - no technical detail disclosed to users  (story 186199)
-Run on: 2026-10-15   Commit: d5301ce
+Run on: 2026-10-29   Commit: ed6fa60
 -----------------------------------------------------------------------
 
+ZGIA_EVENT severity=ERROR event=auth_failed method=posit_oauth reason=missing_configuration missing=CONNECT_SERVER,CONNECT_API_KEY,CONNECT_CONTENT_SESSION_TOKEN
+ZGIA_EVENT severity=ERROR event=auth_failed method=none reason=no_authentication_method_available
+ZGIA_EVENT severity=ERROR event=auth_failed method=posit_oauth reason=exchange_rejected attempt=without_audience status=403
 ==============================================================================
 QA EVIDENCE - ERROR HANDLING / INFORMATION DISCLOSURE
 ACN-2026-31023 / story 186199

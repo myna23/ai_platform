@@ -1,5 +1,5 @@
 EVIDENCE: File uploads are not available  (story 186189)
-Run on: 2026-10-15   Commit: d5301ce
+Run on: 2026-10-29   Commit: ed6fa60
 -----------------------------------------------------------------------
 
 ==============================================================================
@@ -11,7 +11,7 @@ Application        : Zambia GeoHub AI Assistant
 Approved scope     : public data only
 ------------------------------------------------------------------------------
 1. No file-upload control is created
-   PASS - no upload widget appears in 15 application .py files
+   PASS - no upload widget appears in 11 application .py files
 
 2. Chat input accepts text only
    PASS - st.chat_input("Ask a question, say 'generate a report on...', or 'summarise...'")

@@ -1,5 +1,5 @@
 EVIDENCE: Input validation - closed place-name allowlist  (story 186198)
-Run on: 2026-10-15   Commit: d5301ce
+Run on: 2026-10-29   Commit: ed6fa60
 -----------------------------------------------------------------------
 
 ==============================================================================
@@ -23,11 +23,11 @@ def _is_valid_place(name: str) -> bool:
 
 ENFORCEMENT POINTS - every call site, located in the current source
 ------------------------------------------------------------------------------
-  app.py:2069: locs = [l for l in locs if _is_valid_place(l)]
-  app.py:2175: if not _is_valid_place(cand):
-  app.py:2197: if _is_valid_place(loc):
-  app.py:2203: if _is_valid_place(loc):
-  app.py:2209: if _is_valid_place(loc):
+  app.py:2078: locs = [l for l in locs if _is_valid_place(l)]
+  app.py:2184: if not _is_valid_place(cand):
+  app.py:2206: if _is_valid_place(loc):
+  app.py:2212: if _is_valid_place(loc):
+  app.py:2218: if _is_valid_place(loc):
 ------------------------------------------------------------------------------
 
 TEST RESULTS
