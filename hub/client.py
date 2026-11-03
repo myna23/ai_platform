@@ -160,14 +160,22 @@ _SUBJECT_BOOST_MODULE = {
     "flood prone": "Zambia_Flood_Prone_Districts", "risk": "Zambia_Risk_Layers_Aggregated",
     # New datasets
     "population": "Zambia_Population_2025_WP", "people": "Zambia_Population_2025_WP",
+    # AGO_COD_ZMB_Mines_pt is public but regional — 16 points, mostly in the DRC
+    # and mostly unnamed. The bundled Zambian mines file is the better source,
+    # so all mineral keywords route to the layer that falls back to it.
     "mine": "zmb_mines_osm_20251009py", "mines": "zmb_mines_osm_20251009py",
-    "mining": "zmb_mines_osm_20251009py", "copper": "AGO_COD_ZMB_Mines_pt",
+    "mining": "zmb_mines_osm_20251009py", "copper": "zmb_mines_osm_20251009py",
+    "cobalt": "zmb_mines_osm_20251009py", "mineral": "zmb_mines_osm_20251009py",
+    "minerals": "zmb_mines_osm_20251009py",
     "power": "Zambia_Power_Infrastructure", "electricity": "Zambia_Power_Infrastructure",
     "microgrid": "Existing_Microgrids", "microgrids": "Existing_Microgrids",
     "electrification": "zambia_dre_settlement_points",
     "renewable": "zmb_DRE_Atlas", "solar": "zmb_DRE_Atlas",
-    "wealth": "Zambia_Relative_Wealth_Index",
+    "wealth": "Zambia_Relative_Wealth_Index", "rwi": "Zambia_Relative_Wealth_Index",
     "poverty": "zmb_ADM3_const_Poverty", "poor": "zmb_ADM3_const_Poverty",
+    "poorest": "zmb_ADM3_const_Poverty", "deprivation": "zmb_ADM3_const_Poverty",
+    "income": "zmb_ADM3_const_Poverty", "consumption": "zmb_ADM3_const_Poverty",
+    "headcount": "zmb_ADM3_const_Poverty", "livelihood": "zmb_ADM3_const_Poverty",
     "marketplace": "Zambia_Marketplaces", "marketplaces": "Zambia_Marketplaces",
     # "market", "markets", "shop", "shops", "commerce", "trade", "business" removed from here —
     # handled by POI (Type=Commercial) which has Province/District fields.
@@ -177,6 +185,33 @@ _SUBJECT_BOOST_MODULE = {
     "migration": "Zambia_Net_Migration_2000_to_2019",
     "building": "Zambia_Building_Footprints", "buildings": "Zambia_Building_Footprints",
 }
+
+
+# Administrative-geography words say how an answer should be grouped, not what it
+# is about. "Which constituencies have the highest poverty headcount?" is a poverty
+# question grouped by constituency, not a question about boundaries. These keywords
+# are only used when nothing else in the question matches.
+_WEAK_SUBJECTS = {
+    "constituency", "constituencies", "electoral",
+    "district", "districts", "province", "provinces", "ward", "wards",
+}
+
+
+def subject_match(q_lower: str):
+    """Return the dataset URL fragment for a question, or "" if no subject matches.
+
+    A thematic keyword always beats an administrative-geography one, so adding a
+    grouping phrase to a question does not change which dataset answers it.
+    """
+    weak = ""
+    for kw, frag in _SUBJECT_BOOST_MODULE.items():
+        if kw not in q_lower:
+            continue
+        if kw in _WEAK_SUBJECTS:
+            weak = weak or frag
+            continue
+        return frag
+    return weak
 
 
 def _load_static(url: str, poi_type: str = ""):

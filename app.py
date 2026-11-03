@@ -3071,7 +3071,8 @@ def process_question(question: str):
             except Exception:
                 datasets = []
 
-        from hub.client import _load_static, _POI_TYPE_MAP_MODULE, _SUBJECT_BOOST_MODULE, _SEED_CATALOG
+        from hub.client import (_load_static, _POI_TYPE_MAP_MODULE,
+                                _SEED_CATALOG, subject_match)
 
         _poi_type = ""
         for kw, ptype in _POI_TYPE_MAP_MODULE.items():
@@ -3085,17 +3086,16 @@ def process_question(question: str):
             # FeatureServer service (0, 1, 2, …) and layer 0 always appears first,
             # which is wrong for multi-layer services like mines (/12), poverty (/50), etc.
             catalog = hub.get_catalog()
-            for kw, frag in _SUBJECT_BOOST_MODULE.items():
-                if kw in q_lower:
-                    for ds in _SEED_CATALOG:
-                        if frag in ds["url"]:
-                            sd = _load_static(ds["url"], poi_type=_poi_type)
-                            if sd and sd.get("features"):
-                                return sd, ds
-                            else:
-                                # No local static file but this IS the right dataset —
-                                # return it as the candidate so live fetch runs on it.
-                                return None, ds
+            frag = subject_match(q_lower)
+            if frag:
+                for ds in _SEED_CATALOG:
+                    if frag in ds["url"]:
+                        sd = _load_static(ds["url"], poi_type=_poi_type)
+                        if sd and sd.get("features"):
+                            return sd, ds
+                        # No local static file but this IS the right dataset —
+                        # return it as the candidate so live fetch runs on it.
+                        return None, ds
             for kw in _POI_TYPE_MAP_MODULE:
                 if kw in q_lower:
                     for ds in catalog:
@@ -3640,7 +3640,22 @@ def process_question(question: str):
         # No location: try live fetch, fall back to static
         if not sample_features:
             _fetch_errors = []
-            for candidate in datasets:
+            # Resolve the subject before fetching. Without this the generic text
+            # ranking decides, and the first layer that happens to return rows wins
+            # even when it has nothing to do with the question.
+            _boost_static, _boost_candidate = _find_static(question.lower())
+            _candidates = datasets
+            if _boost_candidate:
+                datasets = [_boost_candidate] + [d for d in datasets if d != _boost_candidate]
+                _candidates = datasets
+                # Once the subject is known and we hold data for it, only that
+                # dataset can answer. Falling through to the next-ranked layer
+                # would answer from unrelated data; the static fallback below is
+                # the right path. If the subject has no bundled data either, keep
+                # the ranked list so the question still gets a live attempt.
+                if _boost_static and _boost_static.get("features"):
+                    _candidates = [_boost_candidate]
+            for candidate in _candidates:
                 with st.spinner(f"Loading data from '{candidate['name']}'..."):
                     try:
                         if _draw_bbox:
@@ -3736,6 +3751,15 @@ def process_question(question: str):
                     {"type": "FeatureCollection", "features": _static_feats},
                     n=len(_static_feats)
                 )
+                # The bundled files are samples, not complete inventories. Without
+                # this the model reports the sample total as the national figure.
+                sample_features = [{"_note": (
+                    f"Live data is unavailable for this dataset, so the {len(_static_feats)} "
+                    f"records below come from the pre-loaded offline sample. The sample does "
+                    f"not cover all of Zambia. Answer only from these records, state that the "
+                    f"figures come from an offline sample rather than the live GeoHub, and do "
+                    f"not present any count or ranking as a national total. Do NOT invent data."
+                )}] + sample_features
                 # Use full static set for map_geojson so the radius filter
                 # (applied below) can search all features, not just the first 50
                 map_geojson = {"type": "FeatureCollection", "features": _static_feats}
