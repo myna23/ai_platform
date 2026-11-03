@@ -3751,14 +3751,28 @@ def process_question(question: str):
                     {"type": "FeatureCollection", "features": _static_feats},
                     n=len(_static_feats)
                 )
-                # The bundled files are samples, not complete inventories. Without
+                # Most bundled files are samples, not complete inventories. Without
                 # this the model reports the sample total as the national figure.
+                # A file marked "coverage": "complete" is full national coverage and
+                # its totals can be quoted as such — it is simply not live.
+                _complete = (_static_data or {}).get("coverage") == "complete"
+                if _complete:
+                    _coverage_note = (
+                        "These records are the complete national set for this dataset, "
+                        "so counts and rankings over them are valid nationally. State "
+                        "that the figures come from the pre-loaded copy rather than a "
+                        "live query."
+                    )
+                else:
+                    _coverage_note = (
+                        "The sample does not cover all of Zambia. State that the figures "
+                        "come from an offline sample rather than the live GeoHub, and do "
+                        "not present any count or ranking as a national total."
+                    )
                 sample_features = [{"_note": (
                     f"Live data is unavailable for this dataset, so the {len(_static_feats)} "
-                    f"records below come from the pre-loaded offline sample. The sample does "
-                    f"not cover all of Zambia. Answer only from these records, state that the "
-                    f"figures come from an offline sample rather than the live GeoHub, and do "
-                    f"not present any count or ranking as a national total. Do NOT invent data."
+                    f"records below come from the pre-loaded offline copy. {_coverage_note} "
+                    f"Answer only from these records. Do NOT invent data."
                 )}] + sample_features
                 # Use full static set for map_geojson so the radius filter
                 # (applied below) can search all features, not just the first 50

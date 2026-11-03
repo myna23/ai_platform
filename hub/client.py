@@ -1133,7 +1133,7 @@ _SEED_CATALOG = [
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/AGO_COD_ZMB_Mines_pt/FeatureServer/2",
      "tags": ["mining", "mines", "minerals", "extraction", "copper", "cobalt", "industry", "zambia", "zmb"], "fields": [], "geometry_type": "Point", "extent": {}, "modified": ""},
     {"id": "zmb_constituency_poverty", "name": "Zambia Constituency Poverty Index",
-     "description": "Poverty headcount and consumption estimates by constituency across Zambia. Fields: constituency_code, Mean_consump_adult_ZMW, pt_est_pov_headcount. Critical for targeting social programs.",
+     "description": "Poverty estimates for all 156 constituencies across Zambia's 116 districts and 10 provinces. Fields: ConstName, DISTRICT, PROVINCE, pt_est_pov_headcount, Pov_gap, Pov_severity, Gini, Mean_consump_adult_ZMW, population, abs_poor. Modelled small-area estimates, not direct measurement. Critical for targeting social programs.",
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/zmb_ADM3_const_Poverty/FeatureServer/50",
      "tags": ["poverty", "consumption", "socioeconomic", "constituencies", "welfare", "inequality", "zambia", "zmb"], "fields": [], "geometry_type": "Polygon", "extent": {}, "modified": ""},
     {"id": "zmb_health_2025", "name": "Zambia Health Facilities 2025 (MFL)",
