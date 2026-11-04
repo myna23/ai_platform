@@ -231,16 +231,37 @@ def chatbot_user_prompt(
 
     # Sample records + pre-aggregated counts
     if sample_features:
-        # Show up to 15 sample records
-        sample_section = (
-            f"Sample records from top dataset ({len(sample_features)} records loaded):\n"
-            f"```json\n{json.dumps(sample_features[:15], indent=2)}\n```\n"
-        )
+        # Guidance rows carry no data; keep them out of the records and the counts.
+        notes = [r["_note"] for r in sample_features if "_note" in r]
+        rows = [r for r in sample_features if "_note" not in r]
+
+        # Include as many records as fit in a character budget rather than a fixed
+        # handful. "Which is highest" is answered from these rows, so a short prefix
+        # silently returns the winner of the prefix instead of the real one.
+        RECORD_BUDGET = 60000
+        shown = rows
+        while shown and len(json.dumps(shown, indent=2)) > RECORD_BUDGET:
+            shown = shown[:max(1, int(len(shown) * 0.8))]
+
+        if len(shown) < len(rows):
+            header = (
+                f"Sample records from top dataset - showing {len(shown)} of {len(rows)} "
+                f"loaded records. This is a PARTIAL view: do not state any maximum, "
+                f"minimum, 'top N' or ranking as if it covered the whole dataset.\n"
+            )
+        else:
+            header = (
+                f"All {len(rows)} loaded records from the top dataset are listed below. "
+                f"Rankings and extremes computed over them cover every record loaded.\n"
+            )
+        sample_section = header + f"```json\n{json.dumps(shown, indent=2)}\n```\n"
+        if notes:
+            sample_section = "\n".join(notes) + "\n\n" + sample_section
         # Pre-aggregate by key categorical fields so AI can answer counting questions
         agg_section = ""
         for field in ["District", "Province", "Type", "SubType", "Facility_T", "PROVINCE", "DISTRICT"]:
-            if sample_features and field in sample_features[0]:
-                counts = _aggregate(sample_features, field)
+            if rows and field in rows[0]:
+                counts = _aggregate(rows, field)
                 top = list(counts.items())[:10]
                 agg_section += f"\nCount by {field} (from loaded sample):\n"
                 for val, cnt in top:
