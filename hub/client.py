@@ -173,6 +173,11 @@ _SUBJECT_BOOST_MODULE = {
     "cobalt": "zmb_mines_osm_20251009py", "mineral": "zmb_mines_osm_20251009py",
     "minerals": "zmb_mines_osm_20251009py",
     "power": "Zambia_Power_Infrastructure", "electricity": "Zambia_Power_Infrastructure",
+    "substation": "Zambia_Power_Infrastructure", "substations": "Zambia_Power_Infrastructure",
+    # Must stay ahead of "railway" so "railway station" reaches the 252 stations
+    # rather than the 3,811 track segments, and behind the power entries so
+    # "power station" and "substation" are not pulled onto the railway.
+    "station": "LobitoCorridor_Stations", "stations": "LobitoCorridor_Stations",
     "microgrid": "Existing_Microgrids", "microgrids": "Existing_Microgrids",
     "electrification": "zambia_dre_settlement_points",
     "renewable": "zmb_DRE_Atlas", "solar": "zmb_DRE_Atlas",
