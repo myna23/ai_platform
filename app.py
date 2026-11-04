@@ -2902,6 +2902,10 @@ def process_question(question: str):
     geojson = None
     map_geojson = None   # lightweight copy for map rendering (≤50 features)
     sample_features = []
+    # The Live/Cached badge and the low-confidence note describe THIS answer.
+    # Session state carries the previous question's verdict forward, so a live
+    # answer after an offline one was still being badged "Cached data".
+    st.session_state["_last_fetch_was_live"] = False
     _total_count = None   # exact count from live API, set when location query succeeds
     _cross_context = {}   # flood + risk data fetched alongside main query
 
@@ -3044,6 +3048,8 @@ def process_question(question: str):
                     st.info(f"🌐 Showing {len(live_feats)} live records for {_location}.")
                 sample_features = geojson_to_sample_rows(geojson, n=len(live_feats))
                 map_geojson = {"type": "FeatureCollection", "features": live_feats[:200]}
+                if live_feats:
+                    st.session_state["_last_fetch_was_live"] = True
             except Exception as _ctx_e:
                 # Detail logged server-side only (ACN-2026-31023, stories 186199/186216)
                 _log_event("geohub_context_fetch_failed", "WARN",
@@ -3695,6 +3701,9 @@ def process_question(question: str):
                         if sample_features:
                             map_geojson = {"type": "FeatureCollection", "features": geojson.get("features", [])[:50]}
                             datasets = [candidate] + [d for d in datasets if d != candidate]
+                            st.session_state["_last_fetch_was_live"] = True
+                            _log_event("geohub_fetch_ok", "INFO",
+                                       location="none", records=len(sample_features))
                             break
                     except Exception as e:
                         _fetch_errors.append(f"{candidate['name']}: {type(e).__name__}")
