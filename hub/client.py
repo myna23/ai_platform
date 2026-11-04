@@ -143,6 +143,11 @@ _SUBJECT_BOOST_MODULE = {
     "flood": "Zambia_Flood_Prone_Districts", "flooding": "Zambia_Flood_Prone_Districts",
     "biodiversity": "Zambia_Biodiversity_Data", "wildlife": "Zambia_Biodiversity_Data",
     "park": "ZMB_National_Parks", "national park": "ZMB_National_Parks", "game": "ZMB_National_Parks",
+    # There is no tourism dataset on the GeoHub. Parks and game management areas are
+    # the closest public proxy; the dataset name is cited so the answer says what it is.
+    "tourism": "ZMB_National_Parks", "tourist": "ZMB_National_Parks",
+    "attraction": "ZMB_National_Parks", "attractions": "ZMB_National_Parks",
+    "safari": "ZMB_National_Parks",
     "protected area": "ZMB_National_Parks", "conservation": "ZMB_National_Parks",
     "forest reserve": "ZMB_Forest_Reserves_2", "reserve": "ZMB_Forest_Reserves_2",
     "erosion": "ZMB_Erosion_Hazards_Classification", "land degradation": "ZMB_Erosion_Hazards_Classification",
@@ -176,6 +181,10 @@ _SUBJECT_BOOST_MODULE = {
     "poorest": "zmb_ADM3_const_Poverty", "deprivation": "zmb_ADM3_const_Poverty",
     "income": "zmb_ADM3_const_Poverty", "consumption": "zmb_ADM3_const_Poverty",
     "headcount": "zmb_ADM3_const_Poverty", "livelihood": "zmb_ADM3_const_Poverty",
+    # No "prosperity index" exists. Mean adult consumption in the poverty layer is
+    # the usable measure, so route there and let the answer name what it ranked on.
+    "prosperity": "zmb_ADM3_const_Poverty", "wellbeing": "zmb_ADM3_const_Poverty",
+    "standard of living": "zmb_ADM3_const_Poverty",
     "marketplace": "Zambia_Marketplaces", "marketplaces": "Zambia_Marketplaces",
     # "market", "markets", "shop", "shops", "commerce", "trade", "business" removed from here —
     # handled by POI (Type=Commercial) which has Province/District fields.
