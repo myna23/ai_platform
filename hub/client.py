@@ -138,6 +138,13 @@ _SUBJECT_BOOST_MODULE = {
     "road": "glc_ZMB_trs_roads", "roads": "glc_ZMB_trs_roads", "highway": "glc_ZMB_trs_roads",
     "transport": "glc_ZMB_trs_roads",
     "river": "OSM_rivers", "rivers": "OSM_rivers", "stream": "OSM_rivers",
+    # Ahead of "lake" so "cage aquaculture on Lake Kariba" reaches the suitability
+    # zones rather than the lakes layer. "fish" and "fisheries" are left out on
+    # purpose - those are a POI type (existing facilities), while these layers
+    # model where farming would suit.
+    "cage aquaculture": "Suitability_zones_for_cage_aquaculture",
+    "kariba": "Suitability_zones_for_cage_aquaculture",
+    "aquaculture": "Zambia_onshore_aquaculture", "fish farming": "Zambia_onshore_aquaculture",
     "wetland": "Zambia_wetlands_lakes", "lake": "Zambia_wetlands_lakes",
     "forest": "Zambia_Forests_Data", "woodland": "Zambia_Forests_Data", "tree": "Zambia_Forests_Data",
     "flood": "Zambia_Flood_Prone_Districts", "flooding": "Zambia_Flood_Prone_Districts",
