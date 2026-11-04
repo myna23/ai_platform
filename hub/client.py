@@ -1146,7 +1146,7 @@ _SEED_CATALOG = [
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/Zambia_Distribution_MV_Underground_Line/FeatureServer/0",
      "tags": ["power", "electricity", "mv lines", "medium voltage", "underground", "distribution", "grid", "urban", "energy", "zambia", "zmb"], "fields": [], "geometry_type": "LineString", "extent": {}, "modified": ""},
     {"id": "zmb_mines_osm", "name": "Zambia Mines (OSM)",
-     "description": "Mining area polygons across Zambia from OpenStreetMap. Fields: industrial, landuse. Shows active and historical mining areas.",
+     "description": "Mines and quarries across Zambia, clipped to the national boundary from the public OSM extract and enriched with mineral type and operator. Fields: Name, Type (mineral or working), Operator, Status, DISTRICT, PROVINCE. Covers copper, coal, emerald, nickel, limestone, manganese and aggregate workings.",
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/zmb_mines_osm_20251009py/FeatureServer/12",
      "tags": ["mining", "mines", "minerals", "extraction", "industry", "copper", "zambia", "zmb"], "fields": [], "geometry_type": "Polygon", "extent": {}, "modified": ""},
     {"id": "zmb_mines_cod", "name": "Zambia Mines (COD Points)",
