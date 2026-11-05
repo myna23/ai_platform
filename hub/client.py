@@ -171,7 +171,11 @@ _SUBJECT_BOOST_MODULE = {
     "flood": "Zambia_Flood_Prone_Districts", "flooding": "Zambia_Flood_Prone_Districts",
     "flood prone": "Zambia_Flood_Prone_Districts", "risk": "Zambia_Risk_Layers_Aggregated",
     # New datasets
-    "population": "Zambia_Population_2025_WP", "people": "Zambia_Population_2025_WP",
+    # The GRID3 district layer is public; the geowb WorldPop copy is not.
+    "population": "Zambia_Districts_with_Estimated_Total_Pop",
+    "people": "Zambia_Districts_with_Estimated_Total_Pop",
+    "inhabitants": "Zambia_Districts_with_Estimated_Total_Pop",
+    "per capita": "Zambia_Districts_with_Estimated_Total_Pop",
     # AGO_COD_ZMB_Mines_pt is public but regional — 16 points, mostly in the DRC
     # and mostly unnamed. The bundled Zambian mines file is the better source,
     # so all mineral keywords route to the layer that falls back to it.
@@ -1093,6 +1097,12 @@ _SEED_CATALOG = [
      "description": "Railway lines across Zambia including the Lobito Corridor. Fields: fclass, name, osm_id. Source: merged OSM railways.",
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/LC_MergedRailways/FeatureServer/4",
      "tags": ["railway", "rail", "train", "lobito", "corridor", "transport", "infrastructure", "zambia", "zmb"], "fields": [], "geometry_type": "LineString", "extent": {}, "modified": ""},
+    # GRID3 publish this one publicly from their own organisation, so the assistant
+    # can read it live. The geowb copy of WorldPop below is organisation-only.
+    {"id": "zmb_population_districts", "name": "Zambia District Population Estimates",
+     "description": "Modelled total population for each of Zambia's 116 districts. Fields: DISTRICT, PROVINCE, POPULATION. Source: GRID3. Use for population counts by district or province, and for per-capita comparisons against facilities or services.",
+     "url": "https://services2.arcgis.com/IsDCghZ73NgoYoz5/arcgis/rest/services/Zambia_Districts_with_Estimated_Total_Pop/FeatureServer/0",
+     "tags": ["population", "census", "demographics", "people", "districts", "grid3", "zambia", "zmb"], "fields": [], "geometry_type": "Polygon", "extent": {}, "modified": ""},
     {"id": "zmb_population_2025", "name": "Zambia Population 2025 (WorldPop)",
      "description": "Estimated population by grid cell for Zambia in 2025. Fields: Population. Source: WorldPop. Use for population counts, density analysis, and service coverage planning.",
      "url": "https://services.arcgis.com/iQ1dY19aHwbSDYIF/arcgis/rest/services/Zambia_Population_2025_WP/FeatureServer/0",
