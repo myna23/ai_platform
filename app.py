@@ -726,6 +726,54 @@ def _render_plotly_map(gjson, ds_name="", context_layers=None, highlight_locatio
                 all_lons += [hl_extent[2], hl_extent[3]]
 
     # --- Main dataset features ---
+
+    # Keys that hold the actual facility/place name
+    _NAME_KEYS = (
+        "name", "Name", "NAME",
+        "facilityname", "FacilityName", "FACILITYNAME",
+        "SchoolName", "school_name", "SCHOOLNAME",
+        "market_name", "MarketName", "MARKETNAME",
+        "place_name", "Place_name", "PlaceName", "Place_Name",
+        "SiteName", "site_name", "SITENAME",
+        "InstitutionName", "institution_name",
+        "HospitalName", "hospital_name",
+    )
+    # Keys that hold location/admin info — never use these as the display name
+    _LOC_KEYS = {"district", "province", "region", "country", "ward",
+                 "constituency", "type", "status", "ownership",
+                 "objectid", "fid", "globalid", "shape", "shape_area", "shape_length"}
+
+    def _label_and_tip(props):
+        label = next((str(props[k]) for k in _NAME_KEYS if props.get(k)), "")
+        if not label and props:
+            # Pick the longest string that isn't a location/admin field
+            candidates = [(k, str(v)) for k, v in props.items()
+                          if v and isinstance(v, str) and k.lower() not in _LOC_KEYS]
+            if candidates:
+                # Prefer values with spaces (full names like "SDA Church Lusaka")
+                spaced = [(k, v) for k, v in candidates if " " in v]
+                label = max(spaced, key=lambda x: len(x[1]))[1] if spaced \
+                        else max(candidates, key=lambda x: len(x[1]))[1]
+
+        # Build tooltip: name + district/province/type
+        district = str(props.get("DISTRICT") or props.get("District") or "")
+        province = str(props.get("PROVINCE") or props.get("Province") or "")
+        ftype    = str(props.get("Type") or props.get("TYPE") or props.get("FacilityType") or
+                       props.get("facilitytype") or props.get("Ownership") or "")
+        tip_parts = [p for p in [label,
+                                 district and f"District: {district}",
+                                 province and f"Province: {province}",
+                                 ftype and f"Type: {ftype}"] if p]
+        return label, (" | ".join(tip_parts) if tip_parts else "—")
+
+    # A polygon narrower than this is smaller than one screen pixel at national
+    # zoom, so its outline alone is invisible — a mine pit or quarry is a few
+    # hundred metres across. Such features also get a centre marker so they can
+    # be seen and hovered on a countrywide map; the outline still appears when
+    # the user zooms in. Districts, parks and other large polygons are well
+    # above the threshold and are drawn as outlines only, as before.
+    _SMALL_POLY_DEG = 0.05   # ≈ 5.5 km
+
     point_rows, poly_paths = [], []
     for f in gjson.get("features", []):
         geom  = f.get("geometry") or {}
@@ -736,51 +784,20 @@ def _render_plotly_map(gjson, ds_name="", context_layers=None, highlight_locatio
         if gt == "Point" and len(c) >= 2:
             lon, lat = c[0], c[1]
             all_lats.append(lat); all_lons.append(lon)
-
-            # Keys that hold the actual facility/place name
-            _NAME_KEYS = (
-                "name", "Name", "NAME",
-                "facilityname", "FacilityName", "FACILITYNAME",
-                "SchoolName", "school_name", "SCHOOLNAME",
-                "market_name", "MarketName", "MARKETNAME",
-                "place_name", "Place_name", "PlaceName", "Place_Name",
-                "SiteName", "site_name", "SITENAME",
-                "InstitutionName", "institution_name",
-                "HospitalName", "hospital_name",
-            )
-            # Keys that hold location/admin info — never use these as the display name
-            _LOC_KEYS = {"district", "province", "region", "country", "ward",
-                         "constituency", "type", "status", "ownership",
-                         "objectid", "fid", "globalid", "shape", "shape_area", "shape_length"}
-
-            label = next((str(props[k]) for k in _NAME_KEYS if props.get(k)), "")
-            if not label and props:
-                # Pick the longest string that isn't a location/admin field
-                candidates = [(k, str(v)) for k, v in props.items()
-                              if v and isinstance(v, str) and k.lower() not in _LOC_KEYS]
-                if candidates:
-                    # Prefer values with spaces (full names like "SDA Church Lusaka")
-                    spaced = [(k, v) for k, v in candidates if " " in v]
-                    label = max(spaced, key=lambda x: len(x[1]))[1] if spaced \
-                            else max(candidates, key=lambda x: len(x[1]))[1]
-
-            # Build tooltip: name + district/province/type
-            district = str(props.get("DISTRICT") or props.get("District") or "")
-            province = str(props.get("PROVINCE") or props.get("Province") or "")
-            ftype    = str(props.get("Type") or props.get("TYPE") or props.get("FacilityType") or
-                           props.get("facilitytype") or props.get("Ownership") or "")
-            tip_parts = [p for p in [label,
-                                     district and f"District: {district}",
-                                     province and f"Province: {province}",
-                                     ftype and f"Type: {ftype}"] if p]
-            tooltip_text = " | ".join(tip_parts) if tip_parts else "—"
-
+            label, tooltip_text = _label_and_tip(props)
             point_rows.append({"lat": lat, "lon": lon, "name": label, "tooltip": tooltip_text})
         else:
             rings = c if gt == "Polygon" else ([r for poly in c for r in poly] if gt == "MultiPolygon" else [])
+            _fx, _fy = [], []
             for ring in rings:
-                all_lons += [x[0] for x in ring]; all_lats += [x[1] for x in ring]
+                _rx = [x[0] for x in ring]; _ry = [x[1] for x in ring]
+                all_lons += _rx; all_lats += _ry
+                _fx += _rx; _fy += _ry
                 poly_paths.append({"path": [[x[0], x[1]] for x in ring]})
+            if _fx and max(max(_fx) - min(_fx), max(_fy) - min(_fy)) < _SMALL_POLY_DEG:
+                label, tooltip_text = _label_and_tip(props)
+                point_rows.append({"lat": sum(_fy) / len(_fy), "lon": sum(_fx) / len(_fx),
+                                   "name": label, "tooltip": tooltip_text})
 
     _fill_color, _line_color = _get_dataset_color(ds_name)
 
@@ -840,7 +857,9 @@ def _render_plotly_map(gjson, ds_name="", context_layers=None, highlight_locatio
         clat = (min(zoom_lats) + max(zoom_lats)) / 2
         clon = (min(zoom_lons) + max(zoom_lons)) / 2
         span = max(max(zoom_lats) - min(zoom_lats), max(zoom_lons) - min(zoom_lons), 0.01)
-        zoom = max(4, min(12, int(_math.log2(180 / span))))
+        # +1 because the chart is 400px tall: the plain log2(180/span) fit left
+        # roughly a screen of empty space around the data on every map.
+        zoom = max(4, min(12, int(_math.log2(180 / span)) + 1))
     else:
         clat, clon, zoom = -13.5, 28.5, 6
 
