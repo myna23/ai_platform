@@ -1485,6 +1485,30 @@ def get_builder(_v=3): return ReportBuilder()
 hub = get_hub()
 builder = get_builder()
 
+# Display names for the models the Posit mAI Gateway accepts. The list of
+# models itself is never written here — it is read from PROVIDERS, which holds
+# the gateway's allow-list, so the dropdown cannot offer a model that would be
+# refused with "403 Model not allowed for Posit applications".
+_POSIT_MODEL_LABELS = {
+    "gpt-6-luna":            "GPT-6 Luna",
+    "gpt-5.6-luna":          "GPT-5.6 Luna",
+    "claude-haiku-5-5":      "Claude Haiku 5.5",
+    "gemini-3.8-flash":      "Gemini 3.8 Flash",
+    "gemini-3.7-flash":      "Gemini 3.7 Flash",
+    "gemini-3.6-flash":      "Gemini 3.6 Flash",
+    "gemini-3.5-flash-lite": "Gemini 3.5 Flash Lite",
+    "gemini-3.1-flash-lite": "Gemini 3.1 Flash Lite",
+}
+_POSIT_PROVIDERS = ("WB Posit (GPT)", "WB Posit (Claude)", "WB Posit (Gemini)")
+
+
+def _posit_model_options():
+    """(label, provider, model) for every model the gateway allows."""
+    return [(_POSIT_MODEL_LABELS.get(_m, _m), _p, _m)
+            for _p in _POSIT_PROVIDERS
+            for _m in PROVIDERS[_p]["models"]]
+
+
 def _resolve_ai_key(provider: str) -> str:
     """Read API key: session state first, then .env / Streamlit secrets."""
     from ai.model_client import PROVIDERS
@@ -1563,17 +1587,7 @@ with st.sidebar:
             ("Haiku 5.5 (WB)",        "WB Desktop (Claude)", "us.anthropic.claude-haiku-5-5"),
         ]
     elif _posit_configured:
-        _sb_model_opts = [
-            ("GPT-6 Luna",      "WB Posit (GPT)",    "gpt-6-luna"),
-            ("GPT-5",           "WB Posit (GPT)",    "gpt-5"),
-            ("GPT-5 mini",      "WB Posit (GPT)",    "gpt-5-mini"),
-            ("GPT-4o",          "WB Posit (GPT)",    "gpt-4o"),
-            ("GPT-4o mini",     "WB Posit (GPT)",    "gpt-4o-mini"),
-            ("Sonnet",          "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
-            ("Haiku",           "WB Posit (Claude)", "us.anthropic.claude-haiku-4-5"),
-            ("Sonnet 5.5",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
-            ("Haiku 5.5",       "WB Posit (Claude)", "us.anthropic.claude-haiku-5-5"),
-        ]
+        _sb_model_opts = _posit_model_options()
     elif _mai_configured:
         _sb_model_opts = [
             ("GPT-4o",        "WB mAI Factory (GPT)",    "gpt-4o"),
@@ -1583,15 +1597,9 @@ with st.sidebar:
     else:
         # No WBG provider configured. Direct external AI providers were removed
         # under OIS security review (ACN-2026-31023) — all inference must route
-        # through the WBG mAI Factory gateway, so the Posit Connect OAuth path is
+        # through the WBG mAI Factory gateway, so the Posit mAI Gateway path is
         # shown here and will surface a configuration notice until WB_POSIT is set.
-        _sb_model_opts = [
-            ("GPT-6 Luna",  "WB Posit (GPT)",    "gpt-6-luna"),
-            ("GPT-5",       "WB Posit (GPT)",    "gpt-5"),
-            ("GPT-4o",      "WB Posit (GPT)",    "gpt-4o"),
-            ("Sonnet",      "WB Posit (Claude)", "us.anthropic.claude-sonnet-4-6"),
-            ("Sonnet 5.5",  "WB Posit (Claude)", "us.anthropic.claude-sonnet-5-5"),
-        ]
+        _sb_model_opts = _posit_model_options()
     _sb_opt_labels = [o[0] for o in _sb_model_opts]
     _sb_opt_models = [o[2] for o in _sb_model_opts]
     _sb_cur_m = st.session_state.get("ai_model", DEFAULT_MODEL)
