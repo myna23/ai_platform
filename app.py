@@ -4193,6 +4193,16 @@ def process_question(question: str):
                 st.session_state.stop_streaming = False
                 _STREAM_BUFFERS.pop(_sess_buf_key, None)
 
+            # The model can return no text at all without raising — a reasoning
+            # model that spends its whole budget on reasoning does exactly that.
+            # Say so rather than leaving an empty answer on screen.
+            if not _ai_error and not (response or "").strip():
+                _log_event("ai_empty_answer", "WARN", model=_ai_model)
+                response = ("⚠️ The AI returned an empty answer. Please ask the question again, "
+                            "or narrow it to a single district.")
+                _ai_error = True
+                st.warning(response)
+
             if not _ai_error:
                 _ai_review_notice()
                 if datasets:

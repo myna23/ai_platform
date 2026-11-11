@@ -157,6 +157,20 @@ def _is_reasoning_model(name: str) -> bool:
     return n.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4"))
 
 
+def _reasoning_budget(max_tokens: int) -> int:
+    """
+    Completion budget for a reasoning model.
+
+    On these models max_completion_tokens covers the internal reasoning as
+    well as the visible answer. A budget sized for the answer alone can be
+    spent entirely on reasoning, and the service then returns a message with
+    no content at all — no error, just an empty answer. Questions that need
+    counting or grouping across many records are the ones that hit it.
+    Headroom is added so the visible answer still has room after reasoning.
+    """
+    return max(int(max_tokens) + 4000, 6000)
+
+
 def _log_event(event: str, severity: str = "INFO", **fields):
     """
     Structured event log, same format the application uses elsewhere
@@ -526,40 +540,58 @@ class ModelClient:
             default_headers=extra_headers,
         )
 
-    def _azure_openai_ask(self, system, user, max_tokens):
+    def _azure_completion(self, messages, max_tokens):
+        """
+        One chat completion against the gateway.
+
+        A reasoning model that spends its whole budget before writing anything
+        returns an empty message with finish_reason "length". That is retried
+        once with a larger budget, because the alternative the user sees is a
+        blank answer with no explanation.
+        """
         client = self._azure_openai_client()
-        kwargs = dict(
-            model=self.model,
-            messages=[
+        reasoning = _is_reasoning_model(self.model)
+        budget = _reasoning_budget(max_tokens) if reasoning else max_tokens
+
+        for attempt in (1, 2):
+            kwargs = dict(model=self.model, messages=messages)
+            if reasoning:
+                kwargs["max_completion_tokens"] = budget
+                kwargs["reasoning_effort"] = "low"
+            else:
+                kwargs["max_tokens"] = budget
+            resp = client.chat.completions.create(**kwargs)
+            if not resp.choices:
+                return ""
+            choice = resp.choices[0]
+            text = choice.message.content or ""
+            if text.strip():
+                return text
+            # Shape of the failure only — no prompt or response text is logged
+            # (ACN-2026-31023, story 186216).
+            _log_event("ai_empty_response", "WARN",
+                       finish_reason=getattr(choice, "finish_reason", None),
+                       budget=budget, attempt=attempt)
+            if not reasoning or getattr(choice, "finish_reason", None) != "length" or attempt == 2:
+                break
+            budget *= 2
+        return ""
+
+    def _azure_openai_ask(self, system, user, max_tokens):
+        return self._azure_completion(
+            [
                 {"role": "system", "content": system},
                 {"role": "user",   "content": user},
             ],
+            max_tokens,
         )
-        if _is_reasoning_model(self.model):
-            kwargs["max_completion_tokens"] = max_tokens
-            kwargs["reasoning_effort"] = "low"
-        else:
-            kwargs["max_tokens"] = max_tokens
-        resp = client.chat.completions.create(**kwargs)
-        if not resp.choices:
-            return ""
-        return resp.choices[0].message.content or ""
 
     def _azure_openai_stream(self, system, user, max_tokens):
         yield self._azure_openai_ask(system, user, max_tokens)
 
     def _azure_openai_stream_history(self, system, messages, max_tokens):
-        client = self._azure_openai_client()
         full_messages = [{"role": "system", "content": system}] + _to_openai_content(messages)
-        kwargs = dict(model=self.model, messages=full_messages)
-        if _is_reasoning_model(self.model):
-            kwargs["max_completion_tokens"] = max_tokens
-            kwargs["reasoning_effort"] = "low"
-        else:
-            kwargs["max_tokens"] = max_tokens
-        resp = client.chat.completions.create(**kwargs)
-        if resp.choices:
-            yield resp.choices[0].message.content or ""
+        yield self._azure_completion(full_messages, max_tokens)
 
     # ------------------------------------------------------------------
     # WB Desktop (Claude via mAI Factory Bedrock) — DesktopToken + requests
