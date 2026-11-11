@@ -428,6 +428,27 @@ class ModelClient:
             budget *= 2
         return ""
 
+    # The gateway's documented failures (Posit mAI Gateway developer guide,
+    # section 7). Mapping the status to its cause turns "the request could not
+    # be completed" into something fixable without reading a response body,
+    # which must never be logged (ACN-2026-31023, story 186216).
+    _MAI_STATUS_CAUSE = {
+        400: "a required header or the mai-endpoint parameter is missing or malformed",
+        401: "the gateway did not accept this app",
+        403: "the model is not on the gateway's allow-list, the Posit app id is "
+             "invalid, or the request did not come from an app running on Posit Connect",
+        404: "the gateway URL is wrong - check the trailing slash on MAI_BASE_URL",
+    }
+
+    def _mai_check(self, resp, flavour):
+        """Raise with the status and its documented cause; log the status only."""
+        if resp.status_code < 400:
+            return
+        cause = self._MAI_STATUS_CAUSE.get(resp.status_code, "see the gateway guide")
+        _log_event("ai_request_failed", "ERROR", gateway="posit_mai",
+                   flavour=flavour, model=self.model, status=resp.status_code)
+        raise RuntimeError(f"The AI gateway returned HTTP {resp.status_code} - {cause}.")
+
     def _mai_claude(self, base_url, endpoint, headers, system, messages, max_tokens):
         """Claude models — mAI serves these through the Bedrock Converse API."""
         import requests
@@ -443,7 +464,7 @@ class ModelClient:
             headers={**headers, "Content-Type": "application/json"},
             json=body, timeout=120,
         )
-        resp.raise_for_status()
+        self._mai_check(resp, "claude")
         _parts = resp.json().get("output", {}).get("message", {}).get("content", [])
         return "".join(p.get("text", "") for p in _parts).strip()
 
@@ -462,7 +483,7 @@ class ModelClient:
             headers={**headers, "Content-Type": "application/json"},
             json=body, timeout=120,
         )
-        resp.raise_for_status()
+        self._mai_check(resp, "gemini")
         _data = resp.json()
         return (_data.get("output_text")
                 or _data.get("outputText")
