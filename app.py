@@ -2921,21 +2921,31 @@ if st.session_state.edit_idx is not None:
 _BREAKDOWN_FIELDS = ("subtype", "type", "facility_t", "facilitytype", "fclass",
                      "status", "ownership", "classifica", "category", "class")
 
+# Place fields, counted separately from the category split above. "Break this
+# down by district" is one of the app's own suggestion chips, and on a live
+# layer holding more than the 200 records we load it could only be answered
+# from the sample. A district-scoped question yields a single group and is
+# dropped by the two-group minimum, so this only ever fires where it helps.
+_BREAKDOWN_GEO_FIELDS = ("district", "distr_name", "dist_name", "district_n",
+                         "adm2_en", "province", "prov_name", "adm1_en")
+
 
 def _exact_category_breakdown(base_url, where, headers, _req, timeout=15):
     """
-    Exact per-category counts for the WHOLE filtered set, computed by the
+    Exact counts per category for the WHOLE filtered set, computed by the
     feature service instead of from the records we load.
 
     We load 200 records but report the true total from a count query, so a
     follow-up like "how many of those 328 are secondary schools" could only be
     estimated from the sample — the model answered "about 10% of 328" where the
     real figure is 29. A grouped statistics query returns one row per category,
-    so the exact split costs a single request and a line of prompt text.
+    so the exact split costs a request and a line of prompt text.
 
-    Returns "" whenever the service will not group, no suitable field exists, or
-    the split is too fine to be useful; the caller then behaves exactly as
-    before and the model falls back to the sample.
+    Up to two splits are returned, one by kind and one by place, from a single
+    metadata lookup. Returns "" whenever the service will not group, no
+    suitable field exists, or a split is too coarse or too fine to be useful;
+    the caller then behaves exactly as before and the model falls back to the
+    sample.
     """
     try:
         _meta = _req.get(base_url, params={"f": "json"},
@@ -2943,18 +2953,13 @@ def _exact_category_breakdown(base_url, where, headers, _req, timeout=15):
         _oid = _meta.get("objectIdField") or "OBJECTID"
         _names = [f.get("name") for f in _meta.get("fields", [])
                   if f.get("type") == "esriFieldTypeString" and f.get("name")]
-        # Priority order, so a layer carrying both Type and SubType is split by
-        # the finer one. "Type" on the schools layer is School vs School
-        # Affiliated Infrastructure — true, and useless.
-        _fields = sorted(
-            (n for n in _names if n.lower() in _BREAKDOWN_FIELDS),
-            key=lambda n: _BREAKDOWN_FIELDS.index(n.lower()))
 
-        for _field in _fields[:2]:   # at most two extra requests
+        def _grouped(field, max_groups):
+            """Counts per value of `field`, or None if the split is unusable."""
             _resp = _req.get(
                 f"{base_url}/query",
                 params={"where": where,
-                        "groupByFieldsForStatistics": _field,
+                        "groupByFieldsForStatistics": field,
                         "outStatistics": _json_mod.dumps(
                             [{"statisticType": "count", "onStatisticField": _oid,
                               "outStatisticFieldName": "n"}]),
@@ -2962,24 +2967,47 @@ def _exact_category_breakdown(base_url, where, headers, _req, timeout=15):
                 headers=headers, timeout=timeout)
             _data = _resp.json()
             if "error" in _data or not _data.get("features"):
-                continue
-            _pairs = [(str(_a.get(_field) or "Unspecified"), int(_a.get("n") or 0))
+                return None
+            _pairs = [(str(_a.get(field) or "Unspecified"), int(_a.get("n") or 0))
                       for _a in (_f.get("attributes", {}) for _f in _data["features"])]
             _pairs = [p for p in _pairs if p[1] > 0]
-            if len(_pairs) < 2 or len(_pairs) > 40:
-                continue
+            if len(_pairs) < 2 or len(_pairs) > max_groups:
+                return None
             _pairs.sort(key=lambda p: -p[1])
             _total = sum(_n for _, _n in _pairs)
-            # One category holding nearly everything says nothing worth sending.
+            # One value holding nearly everything says nothing worth sending.
             if not _total or _pairs[0][1] / _total > 0.95:
-                continue
-            _listed = "; ".join(f"{_k}: {_n:,}" for _k, _n in _pairs)
-            return (f"\n\n[EXACT BREAKDOWN BY {_field} — counted by the data service across "
+                return None
+            return _pairs, _total
+
+        # (candidate fields, group ceiling, how many fields to try). Each try is
+        # a request against the service, so the place split gets one attempt —
+        # if the layer's district column is missing the province one is first in
+        # the list anyway, and on a district-scoped question both collapse to a
+        # single group and are dropped.
+        _notes = []
+        for _prefs, _max_groups, _tries in ((_BREAKDOWN_FIELDS, 40, 2),
+                                            (_BREAKDOWN_GEO_FIELDS, 60, 1)):
+            # Priority order, so a layer carrying both Type and SubType is split
+            # by the finer one. "Type" on the schools layer is School vs School
+            # Affiliated Infrastructure — true, and useless.
+            _fields = sorted((n for n in _names if n.lower() in _prefs),
+                             key=lambda n: _prefs.index(n.lower()))
+            for _field in _fields[:_tries]:
+                _got = _grouped(_field, _max_groups)
+                if not _got:
+                    continue
+                _pairs, _total = _got
+                _listed = "; ".join(f"{_k}: {_n:,}" for _k, _n in _pairs)
+                _notes.append(
+                    f"\n\n[EXACT BREAKDOWN BY {_field} — counted by the data service across "
                     f"all {_total:,} matching records, not from the sample records above. "
                     f"These counts are complete and authoritative. Use them to answer any "
-                    f"'how many of those are X' question, and do not estimate or extrapolate "
-                    f"from the sample when a category appears here: {_listed}]")
-        return ""
+                    f"'how many of those are X' or 'break it down by {_field}' question, and "
+                    f"do not estimate or extrapolate from the sample when a value appears "
+                    f"here: {_listed}]")
+                break
+        return "".join(_notes)
     except Exception:
         return ""
 
@@ -3337,7 +3365,7 @@ def process_question(question: str):
                                     _base_url, _where, _headers, _req)
                                 if _breakdown_note:
                                     _breakdown_note = _breakdown_note.replace(
-                                        "matching records", f"records in {_location}", 1)
+                                        "matching records", f"records in {_location}")
                                     # Kept for the next turn: a follow-up such as
                                     # "how many of those are secondary?" names no
                                     # place, so this path does not run again.
