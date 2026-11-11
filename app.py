@@ -3024,7 +3024,8 @@ def _exact_category_breakdown(base_url, where, headers, _req, timeout=15):
                 _notes.append(
                     f"\n\n[EXACT BREAKDOWN BY {_field} — counted by the data service across "
                     f"all {_total:,} matching records, not from the sample records above. "
-                    f"These counts are complete and authoritative. Use them to answer any "
+                    f"These counts are complete and authoritative. Show them as a bulleted "
+                    f"breakdown in your answer, largest first. Use them to answer any "
                     f"'how many of those are X' or 'break it down by {_field}' question, and "
                     f"do not estimate or extrapolate from the sample when a value appears "
                     f"here: {_listed}]")
