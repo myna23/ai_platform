@@ -1503,9 +1503,21 @@ _POSIT_PROVIDERS = ("WB Posit (GPT)", "WB Posit (Claude)", "WB Posit (Gemini)")
 
 
 def _posit_model_options():
-    """(label, provider, model) for every model the gateway allows."""
+    """
+    (label, provider, model) for every model this deployment can actually call.
+
+    Each provider has its own mai-endpoint, so one is offered only when an
+    endpoint addressing it is configured. Otherwise choosing Claude would send
+    a Bedrock request to whichever endpoint happened to be set. GPT is always
+    listed, so the dropdown is never empty and a missing setting surfaces as a
+    named configuration error instead of a blank control.
+    """
+    from ai.model_client import mai_endpoint_for
+    _flavours = {"WB Posit (GPT)": "openai", "WB Posit (Claude)": "claude",
+                 "WB Posit (Gemini)": "gemini"}
     return [(_POSIT_MODEL_LABELS.get(_m, _m), _p, _m)
             for _p in _POSIT_PROVIDERS
+            if _p == "WB Posit (GPT)" or mai_endpoint_for(_flavours[_p])
             for _m in PROVIDERS[_p]["models"]]
 
 

@@ -169,6 +169,31 @@ def _is_reasoning_model(name: str) -> bool:
     return n.startswith(("gpt-5", "gpt-6", "o1", "o3", "o4"))
 
 
+# Each provider has its own mai-endpoint, and MAI_ENDPOINT holds one value.
+# The path identifies which provider it addresses, so a Claude call is never
+# sent to the OpenAI endpoint just because that is what happens to be set.
+_MAI_ENDPOINT_MARKERS = {"openai": "/openai/", "claude": "/bedrock/", "gemini": "/gemini/"}
+
+
+def mai_endpoint_for(flavour: str) -> str:
+    """
+    The mai-endpoint for one provider, or "" when none is configured for it.
+
+    A deployment serving more than one provider sets MAI_ENDPOINT_OPENAI,
+    MAI_ENDPOINT_CLAUDE or MAI_ENDPOINT_GEMINI. One serving a single provider
+    can just set MAI_ENDPOINT, which is then used only for the provider its
+    own URL names.
+    """
+    specific = _os.getenv(f"MAI_ENDPOINT_{flavour.upper()}", "").strip()
+    if specific:
+        return specific
+    shared = _os.getenv("MAI_ENDPOINT", "").strip()
+    marker = _MAI_ENDPOINT_MARKERS.get(flavour, "")
+    if shared and (not marker or marker in shared):
+        return shared
+    return ""
+
+
 def _reasoning_budget(max_tokens: int) -> int:
     """
     Completion budget for a reasoning model.
@@ -329,11 +354,15 @@ class ModelClient:
 
     def _mai_config(self):
         """(base_url ending in '/', mai-endpoint, headers) for the gateway."""
+        flavour  = self._mai_flavour() or "openai"
         base_url = _os.getenv("MAI_BASE_URL", "").strip()
-        endpoint = _os.getenv("MAI_ENDPOINT", "").strip()
+        endpoint = mai_endpoint_for(flavour)
         app_id   = _os.getenv("CONNECT_CONTENT_GUID", "").strip()
+        # Named per provider, so the message says which variable to add rather
+        # than pointing at a MAI_ENDPOINT that is set but addresses another one.
+        _ep_var = "MAI_ENDPOINT" if flavour == "openai" else f"MAI_ENDPOINT_{flavour.upper()}"
         missing = [n for n, v in (("MAI_BASE_URL", base_url),
-                                  ("MAI_ENDPOINT", endpoint),
+                                  (_ep_var, endpoint),
                                   ("CONNECT_CONTENT_GUID", app_id)) if not v]
         if missing:
             # Variable names only: these are deployment configuration, not
