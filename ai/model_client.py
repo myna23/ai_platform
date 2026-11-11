@@ -45,22 +45,33 @@ PROVIDERS = {
     # Auth: Posit Connect calls /__api__/v1/oauth/integrations/credentials with
     # the mAI Factory OAuth integration GUID to get an Azure Bearer token.
     # No manual secrets needed — Posit Connect injects CONNECT_SERVER + CONNECT_API_KEY.
+    # Posit mAI Gateway. The gateway authenticates the app itself — it accepts
+    # requests only from apps running on Posit Connect, identified by the
+    # X-Posit-App-Id header that Connect sets. There is no token exchange, no
+    # Authorization header and no mAI integration to attach; the earlier OAuth
+    # path was retired by the platform team on 2026-11-11.
+    #
+    # Only the models below are accepted. Anything else is refused with
+    # "403 Model not allowed for Posit applications", so the lists are the
+    # gateway's allow-list and must not be extended locally.
     "WB Posit (GPT)": {
         "best":       "gpt-6-luna",
-        "models":     ["gpt-6-luna", "gpt-5", "gpt-5-mini", "gpt-4o", "gpt-4o-mini"],
+        "models":     ["gpt-6-luna", "gpt-5.6-luna"],
         "env_key":    "WB_POSIT",
-        "package":    "azure-openai",
+        "package":    "mai-gateway-openai",
     },
     "WB Posit (Claude)": {
-        "best":    "us.anthropic.claude-sonnet-4-6",
-        "models":  [
-            "us.anthropic.claude-sonnet-4-6",
-            "us.anthropic.claude-haiku-4-5",
-            "us.anthropic.claude-sonnet-5-5",
-            "us.anthropic.claude-haiku-5-5",
-        ],
+        "best":    "claude-haiku-5-5",
+        "models":  ["claude-haiku-5-5"],
         "env_key":  "WB_POSIT",
-        "package":  "bedrock-claude",
+        "package":  "mai-gateway-claude",
+    },
+    "WB Posit (Gemini)": {
+        "best":    "gemini-3.8-flash",
+        "models":  ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash",
+                    "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+        "env_key":  "WB_POSIT",
+        "package":  "mai-gateway-gemini",
     },
     # ── World Bank mAI Factory (primary for WB deployment) ──────────────
     # Single token from mAI Factory replaces all individual provider keys.
@@ -92,16 +103,17 @@ elif _mai_token:
     DEFAULT_PROVIDER = "WB mAI Factory (GPT)"
     DEFAULT_MODEL    = "gpt-4o"
 else:
-    # Default to the Posit Connect OAuth path — the approved deployment route.
+    # Default to the Posit mAI Gateway — the approved deployment route.
     DEFAULT_PROVIDER = "WB Posit (GPT)"
-    DEFAULT_MODEL    = "gpt-5"
+    DEFAULT_MODEL    = "gpt-6-luna"
 
 # Best models shown in the quick selector (one per meaningful provider)
 BEST_MODELS = [
     ("WB Desktop (GPT)",     "gpt-5"),
     ("WB Desktop (Claude)",  "us.anthropic.claude-sonnet-4-6"),
-    ("WB Posit (GPT)",       "gpt-4o"),
-    ("WB Posit (Claude)",    "us.anthropic.claude-sonnet-4-6"),
+    ("WB Posit (GPT)",       "gpt-6-luna"),
+    ("WB Posit (Claude)",    "claude-haiku-5-5"),
+    ("WB Posit (Gemini)",    "gemini-3.8-flash"),
     ("WB mAI Factory (GPT)", "gpt-4o"),
 ]
 
@@ -258,12 +270,19 @@ class ModelClient:
     def _is_bedrock_claude(self):
         return PROVIDERS[self.provider].get("package") == "bedrock-claude"
 
+    def _mai_flavour(self):
+        """'openai', 'claude', 'gemini' for a Posit mAI Gateway provider, else ''."""
+        pkg = PROVIDERS[self.provider].get("package", "")
+        return pkg[len("mai-gateway-"):] if pkg.startswith("mai-gateway-") else ""
+
     # ------------------------------------------------------------------
     # Public interface
     # ------------------------------------------------------------------
 
     def ask(self, system: str, user: str, max_tokens: int = 2048) -> str:
         """Send a single-turn message and return the full response text."""
+        if self._mai_flavour():
+            return self._mai_gateway_call(system, [{"role": "user", "content": user}], max_tokens)
         if self._is_openai():
             return self._openai_ask(system, user, max_tokens)
         if self._is_azure_openai():
@@ -274,7 +293,9 @@ class ModelClient:
 
     def stream(self, system: str, user: str, max_tokens: int = 2048):
         """Stream response as text chunks (compatible with st.write_stream)."""
-        if self._is_openai():
+        if self._mai_flavour():
+            yield self._mai_gateway_call(system, [{"role": "user", "content": user}], max_tokens)
+        elif self._is_openai():
             yield from self._openai_stream(system, user, max_tokens)
         elif self._is_azure_openai():
             yield from self._azure_openai_stream(system, user, max_tokens)
@@ -285,7 +306,9 @@ class ModelClient:
 
     def stream_with_history(self, system: str, messages: list, max_tokens: int = 2048):
         """Multi-turn streaming chat. messages is a list of {role, content} dicts."""
-        if self._is_openai():
+        if self._mai_flavour():
+            yield self._mai_gateway_call(system, messages, max_tokens)
+        elif self._is_openai():
             yield from self._openai_stream_history(system, messages, max_tokens)
         elif self._is_azure_openai():
             yield from self._azure_openai_stream_history(system, messages, max_tokens)
@@ -293,6 +316,128 @@ class ModelClient:
             yield from self._bedrock_claude_stream_history(system, messages, max_tokens)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
+
+    # ------------------------------------------------------------------
+    # Posit mAI Gateway (Posit Connect → mAI)
+    #
+    # The gateway authenticates the application, not the user: it accepts
+    # requests only from apps running on Posit Connect and identifies them by
+    # the X-Posit-App-Id header, whose value Connect sets in
+    # CONNECT_CONTENT_GUID. No Authorization header, API key, subscription key
+    # or team name is sent, and no mAI integration is attached to the content.
+    # ------------------------------------------------------------------
+
+    def _mai_config(self):
+        """(base_url ending in '/', mai-endpoint, headers) for the gateway."""
+        base_url = _os.getenv("MAI_BASE_URL", "").strip()
+        endpoint = _os.getenv("MAI_ENDPOINT", "").strip()
+        app_id   = _os.getenv("CONNECT_CONTENT_GUID", "").strip()
+        missing = [n for n, v in (("MAI_BASE_URL", base_url),
+                                  ("MAI_ENDPOINT", endpoint),
+                                  ("CONNECT_CONTENT_GUID", app_id)) if not v]
+        if missing:
+            # Variable names only: these are deployment configuration, not
+            # secrets, and without them the failure cannot be diagnosed from
+            # logs (ACN-2026-31023, story 186216).
+            _log_event("auth_failed", "ERROR", method="mai_gateway",
+                       reason="missing_config", vars=",".join(missing))
+            raise RuntimeError(
+                "The AI service is not configured for this deployment "
+                f"(missing: {', '.join(missing)})."
+            )
+        # The gateway rejects a URL without the trailing slash.
+        if not base_url.endswith("/"):
+            base_url += "/"
+        return base_url, endpoint, {
+            "X-Posit-App-Id": app_id,
+            "x-source-type": "interactive",
+        }
+
+    def _mai_gateway_call(self, system: str, messages: list, max_tokens: int) -> str:
+        flavour = self._mai_flavour()
+        base_url, endpoint, headers = self._mai_config()
+        _log_event("ai_request", "INFO", gateway="posit_mai", flavour=flavour,
+                   model=self.model)
+        if flavour == "claude":
+            return self._mai_claude(base_url, endpoint, headers, system, messages, max_tokens)
+        if flavour == "gemini":
+            return self._mai_gemini(base_url, endpoint, headers, system, messages, max_tokens)
+        return self._mai_openai(base_url, endpoint, headers, system, messages, max_tokens)
+
+    def _mai_openai(self, base_url, endpoint, headers, system, messages, max_tokens):
+        """GPT models — OpenAI SDK against the gateway, Responses API."""
+        from openai import OpenAI
+        client = OpenAI(
+            base_url=base_url,
+            api_key="not-used",          # the gateway handles authentication
+            default_headers=headers,
+            default_query={"mai-endpoint": endpoint},
+        )
+        reasoning = _is_reasoning_model(self.model)
+        budget = _reasoning_budget(max_tokens) if reasoning else max_tokens
+        _input = [{"role": m.get("role", "user"), "content": m.get("content", "")}
+                  for m in messages if m.get("content")]
+
+        for attempt in (1, 2):
+            resp = client.responses.create(
+                model=self.model,
+                instructions=system,
+                input=_input,
+                max_output_tokens=budget,
+            )
+            text = (getattr(resp, "output_text", "") or "").strip()
+            if text:
+                return text
+            # Spending the whole budget on reasoning before writing anything
+            # returns an empty body rather than an error. Retry once with more
+            # room instead of showing a blank answer.
+            _reason = getattr(getattr(resp, "incomplete_details", None), "reason", None)
+            _log_event("ai_empty_response", "WARN", status=getattr(resp, "status", None),
+                       reason=_reason, budget=budget, attempt=attempt)
+            if not reasoning or attempt == 2:
+                break
+            budget *= 2
+        return ""
+
+    def _mai_claude(self, base_url, endpoint, headers, system, messages, max_tokens):
+        """Claude models — mAI serves these through the Bedrock Converse API."""
+        import requests
+        _msgs = [{"role": m.get("role", "user"),
+                  "content": [{"text": m.get("content", "")}]}
+                 for m in messages if m.get("content")]
+        body = {"messages": _msgs, "inferenceConfig": {"maxTokens": max_tokens}}
+        if system:
+            body["system"] = [{"text": system}]
+        resp = requests.post(
+            base_url + "converse",
+            params={"mai-endpoint": endpoint},
+            headers={**headers, "Content-Type": "application/json"},
+            json=body, timeout=120,
+        )
+        resp.raise_for_status()
+        _parts = resp.json().get("output", {}).get("message", {}).get("content", [])
+        return "".join(p.get("text", "") for p in _parts).strip()
+
+    def _mai_gemini(self, base_url, endpoint, headers, system, messages, max_tokens):
+        """Gemini models — the gateway's interactions endpoint."""
+        import requests
+        _text = "\n\n".join(f"{m.get('role', 'user')}: {m.get('content', '')}"
+                            for m in messages if m.get("content"))
+        body = {"model": self.model, "input": _text,
+                "maxOutputTokens": max_tokens}
+        if system:
+            body["system_instruction"] = system
+        resp = requests.post(
+            base_url + "interactions",
+            params={"mai-endpoint": endpoint},
+            headers={**headers, "Content-Type": "application/json"},
+            json=body, timeout=120,
+        )
+        resp.raise_for_status()
+        _data = resp.json()
+        return (_data.get("output_text")
+                or _data.get("outputText")
+                or _data.get("text") or "").strip()
 
     # ------------------------------------------------------------------
     # WB Desktop (DesktopToken auth) — shared token helper
@@ -423,6 +568,27 @@ class ModelClient:
         import base64 as _b64
         import json as _json
         from datetime import datetime as _dt, timezone as _tz
+
+        if self._mai_flavour():
+            # Nothing to decode: the gateway authenticates the application, so
+            # the check is that the three settings it needs are present.
+            info = {
+                "ok": False,
+                "endpoint": _os.getenv("MAI_BASE_URL", "").strip() or "(not set)",
+                "model": self.model,
+                "team": "(not used - the gateway identifies the app)",
+                "integration": "(none - do not attach mAI Integration)",
+            }
+            try:
+                base_url, endpoint, headers = self._mai_config()
+            except Exception as exc:
+                info["error"] = f"{type(exc).__name__}: {exc}"
+                return info
+            info["ok"] = True
+            info["endpoint"] = base_url
+            info["mai_endpoint"] = endpoint
+            info["app_id"] = headers["X-Posit-App-Id"]
+            return info
 
         info = {
             "ok": False,

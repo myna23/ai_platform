@@ -1611,11 +1611,13 @@ with st.sidebar:
         if st.button("Run check", use_container_width=True, key="sb_conn_check"):
             _chk = ai_client.check_connection()
             if _chk.get("ok"):
-                st.success("Authentication succeeded")
+                st.success("Configuration complete")
             else:
-                st.error("Authentication failed")
+                st.error("Not configured")
                 st.caption(_chk.get("error", ""))
             st.caption(f"**Endpoint** {_chk['endpoint']}")
+            if _chk.get("mai_endpoint"):
+                st.caption(f"**mAI endpoint** {_chk['mai_endpoint']}")
             st.caption(f"**Model** {_chk['model']}  ·  **Team** {_chk['team']}")
             st.caption(f"**Integration** {_chk['integration']}")
             if _chk.get("audience"):
