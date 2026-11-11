@@ -2915,11 +2915,81 @@ if st.session_state.edit_idx is not None:
 # ---------------------------------------------------------------------------
 # Process a question (either new or edited)
 # ---------------------------------------------------------------------------
+# Categorical fields worth counting by. Matched case-insensitively against the
+# layer's own string fields, so a layer that names the column differently simply
+# gets no breakdown rather than a wrong one.
+_BREAKDOWN_FIELDS = ("subtype", "type", "facility_t", "facilitytype", "fclass",
+                     "status", "ownership", "classifica", "category", "class")
+
+
+def _exact_category_breakdown(base_url, where, headers, _req, timeout=15):
+    """
+    Exact per-category counts for the WHOLE filtered set, computed by the
+    feature service instead of from the records we load.
+
+    We load 200 records but report the true total from a count query, so a
+    follow-up like "how many of those 328 are secondary schools" could only be
+    estimated from the sample — the model answered "about 10% of 328" where the
+    real figure is 29. A grouped statistics query returns one row per category,
+    so the exact split costs a single request and a line of prompt text.
+
+    Returns "" whenever the service will not group, no suitable field exists, or
+    the split is too fine to be useful; the caller then behaves exactly as
+    before and the model falls back to the sample.
+    """
+    try:
+        _meta = _req.get(base_url, params={"f": "json"},
+                         headers=headers, timeout=timeout).json()
+        _oid = _meta.get("objectIdField") or "OBJECTID"
+        _names = [f.get("name") for f in _meta.get("fields", [])
+                  if f.get("type") == "esriFieldTypeString" and f.get("name")]
+        # Priority order, so a layer carrying both Type and SubType is split by
+        # the finer one. "Type" on the schools layer is School vs School
+        # Affiliated Infrastructure — true, and useless.
+        _fields = sorted(
+            (n for n in _names if n.lower() in _BREAKDOWN_FIELDS),
+            key=lambda n: _BREAKDOWN_FIELDS.index(n.lower()))
+
+        for _field in _fields[:2]:   # at most two extra requests
+            _resp = _req.get(
+                f"{base_url}/query",
+                params={"where": where,
+                        "groupByFieldsForStatistics": _field,
+                        "outStatistics": _json_mod.dumps(
+                            [{"statisticType": "count", "onStatisticField": _oid,
+                              "outStatisticFieldName": "n"}]),
+                        "f": "json"},
+                headers=headers, timeout=timeout)
+            _data = _resp.json()
+            if "error" in _data or not _data.get("features"):
+                continue
+            _pairs = [(str(_a.get(_field) or "Unspecified"), int(_a.get("n") or 0))
+                      for _a in (_f.get("attributes", {}) for _f in _data["features"])]
+            _pairs = [p for p in _pairs if p[1] > 0]
+            if len(_pairs) < 2 or len(_pairs) > 40:
+                continue
+            _pairs.sort(key=lambda p: -p[1])
+            _total = sum(_n for _, _n in _pairs)
+            # One category holding nearly everything says nothing worth sending.
+            if not _total or _pairs[0][1] / _total > 0.95:
+                continue
+            _listed = "; ".join(f"{_k}: {_n:,}" for _k, _n in _pairs)
+            return (f"\n\n[EXACT BREAKDOWN BY {_field} — counted by the data service across "
+                    f"all {_total:,} matching records, not from the sample records above. "
+                    f"These counts are complete and authoritative. Use them to answer any "
+                    f"'how many of those are X' question, and do not estimate or extrapolate "
+                    f"from the sample when a category appears here: {_listed}]")
+        return ""
+    except Exception:
+        return ""
+
+
 def process_question(question: str):
     intent = detect_intent(question)
 
     geojson = None
     map_geojson = None   # lightweight copy for map rendering (≤50 features)
+    _breakdown_note = ""  # exact per-category counts, when the service can group
     sample_features = []
     # The Live/Cached badge and the low-confidence note describe THIS answer.
     # Session state carries the previous question's verdict forward, so a live
@@ -3258,6 +3328,23 @@ def process_question(question: str):
                                     _total_count = _cnt_data["count"]
                             except Exception:
                                 pass
+                            # More matching records than we load: ask the service
+                            # for the exact split by category, so follow-up
+                            # questions are answered from all of them rather than
+                            # extrapolated from the sample.
+                            if _total_count and _total_count > 200:
+                                _breakdown_note = _exact_category_breakdown(
+                                    _base_url, _where, _headers, _req)
+                                if _breakdown_note:
+                                    _breakdown_note = _breakdown_note.replace(
+                                        "matching records", f"records in {_location}", 1)
+                                    # Kept for the next turn: a follow-up such as
+                                    # "how many of those are secondary?" names no
+                                    # place, so this path does not run again.
+                                    st.session_state["_last_breakdown"] = {
+                                        "ds": _live_candidate.get("name", ""),
+                                        "note": _breakdown_note,
+                                    }
                             # Sample fetch — up to 200 records for table + AI analysis
                             _resp = _req.get(f"{_base_url}/query",
                                 params={"where": _where, "outFields": "*",
@@ -4152,7 +4239,15 @@ def process_question(question: str):
             if _low_confidence_reason:
                 st.warning(f"⚠️ **Low confidence** — {_low_confidence_user}")
 
-            user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note + _confidence_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
+            # Carry the previous turn's exact breakdown into a follow-up that
+            # names no new place and stays on the same dataset — otherwise the
+            # follow-up falls back to estimating from the 200-record sample.
+            if not _breakdown_note and not _location and datasets:
+                _prev_bd = st.session_state.get("_last_breakdown") or {}
+                if _prev_bd.get("note") and _prev_bd.get("ds") == datasets[0].get("name"):
+                    _breakdown_note = _prev_bd["note"]
+
+            user_p = chatbot_user_prompt(question + _compare_note + _doc_ctx + _bbox_note + _meta_note + _breakdown_note + _confidence_note, datasets, sample_features, all_catalog=hub.get_catalog(), total_count=_total_count, location=_location or "", cross_context=_cross_context)
 
             history.append({"role": "user", "content": user_p})
 
